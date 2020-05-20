@@ -1,0 +1,65 @@
+{
+  "pid": "xyz",
+  "description": "Simple GAN with if control flow element, where condition checked on remote side",
+  "startGuard": "guard_one",
+  "finishGuard": "guard_exit",
+
+
+  "guards": [
+    {
+      "id": "guard_one",
+      "type": "and",
+      "slots": [
+        { "type":  "prefix", "prefix":  "xyz/start" }
+      ],
+      "action": "remote_decision_action"
+    },
+    {
+      "id": "guard_a",
+      "type": "and",
+      "slots": [{ "type":  "prefix", "prefix":  "xyz/a_decision" }],
+      "action": ["action_A"]
+    },
+    {
+      "id": "guard_b",
+      "type": "and",
+      "slots": [{ "type":  "prefix", "prefix":  "xyz/b_decision" }],
+      "action": ["action_B"]
+    },
+    {
+      "id": "guard_exit",
+      "type": "and",
+      "slots": [],
+      "action": []
+    }
+  ],
+
+  "guardRelations": [
+    {
+      "type":  "xor",
+      "guards": ["guard_a", "guard_b"]
+    }
+  ],
+
+  "actions": [
+    {
+      "id": "remote_decision_action",
+      "type": "RemoteDecisionTask",
+      /* here action spawns both guards binded each other with XOR */
+      "runGuards": ["guard_a", "guard_b"],
+      "config": {}
+    },
+    {
+      "id": "action_A",
+      "type": "TestAction",
+      "runGuards": ["guard_exit"],
+      "config": {}
+    },
+    {
+      "id": "action_B",
+      "type": "TestAction",
+      "runGuards": ["guard_exit"],
+      "config": {}
+    }
+  ]
+}

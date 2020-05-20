@@ -1,0 +1,109 @@
+{
+  "name": "xyz",
+  "description": "Simple GAN with remote action implementing timeout, retry, failure and success cases",
+  "startGuard": "guard_one",
+  "finishGuard": "guard_exit",
+  "publishGuardEvents": true,
+
+  "guards": [
+    {
+      "id": "guard_one",
+      "type": "AND",
+      "slots": {
+        "start": {
+          "name": "start",
+          "type": "event_custom",
+          "selector": { "type":  "prefix", "prefix":  "start" }
+        }
+      },
+      "action": "remote_action"
+    },
+    {
+      "id": "guard_success",
+      "type": "AND",
+      "slots": {
+        "response": {
+            "name": "response",
+            "type": "event_on_guard"
+        },
+        "ctx": {
+          "name": "ctx",
+          "type": "var"
+        }
+      },
+      "action": "action_final",
+      "timeout": 5000,
+      "timeoutAction": "remote_action"
+    },
+    {
+      "id": "guard_retry",
+      "type": "AND",
+      "slots": {
+        "exception": {
+          "name": "exception",
+          "type": "event_on_guard"
+        },
+        "ctx": {
+          "name": "ctx",
+          "type": "var"
+        }
+      },
+      "action": "remote_action",
+      "timeout": 5000,
+      "timeoutAction": "remote_action"
+    },
+    {
+      "id": "guard_failure",
+      "type": "AND",
+      "slots": {
+        "exception": {
+          "name": "exception",
+          "type": "event_on_guard"
+        }
+      },
+      "action": "failure_action"
+    },
+    {
+      "id": "guard_exit",
+      "type": "AND",
+      "slots": {},
+      "action": null
+    }
+  ],
+
+  "guardRelations": [
+    {
+      "type":  "XOR",
+      "guards": ["guard_success", "guard_retry", "guard_failure"]
+    }
+  ],
+
+  "actions": [
+    {
+      "id": "remote_action",
+      "type": "agent_task",
+      "runGuards": ["guard_success", "guard_retry", "guard_failure"],
+      "guardSuccess": "guard_success",
+      "guardRetry": "guard_retry",
+      "guardFailure": "guard_failure",
+      "taskType": "stub_action",
+      "retryPolicy": {
+        "policy": "NO"
+      },
+      "schedulePolicy": {
+        "policy": "DIRECT",
+        "agentId": "agent1"
+      }
+    },
+    {
+      "id": "action_final",
+      "type": "test",
+      "runGuards": ["guard_exit"]
+    },
+    {
+      "id": "failure_action",
+      "type": "test",
+      "runGuards": ["guard_exit"]
+    }
+  ]
+}

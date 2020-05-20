@@ -1,0 +1,59 @@
+{
+  "pid": "xyz",
+  "description": "Simple GAN with controller-executed if control flow element",
+  "startGuard": "guard_one",
+  "finishGuard": "guard_exit",
+
+
+  "guards": [
+    {
+      "id": "guard_one",
+      "type": "and",
+      "slots": [
+        { "type":  "prefix", "prefix":  "xyz/start" }
+      ],
+      "action": "decide_what"
+    },
+    {
+      "id": "guard_a",
+      "type": "and",
+      "slots": [],
+      "action": ["action_A"]
+    },
+    {
+      "id": "guard_b",
+      "type": "and",
+      "slots": [],
+      "action": ["action_B"]
+    },
+    {
+      "id": "guard_exit",
+      "type": "and",
+      "slots": [],
+      "action": []
+    }
+  ],
+
+  "guardRelations": [],
+
+  "actions": [
+    {
+      "id": "decide_what",
+      "type": "TestAction",
+      "runGuards": ["guard_a", "guard_b"],
+      "config": {}
+    },
+    {
+      "id": "action_A",
+      "type": "TestAction",
+      "runGuards": ["guard_exit"],
+      "config": {}
+    },
+    {
+      "id": "action_B",
+      "type": "TestAction",
+      "runGuards": ["guard_exit"],
+      "config": {}
+    }
+  ]
+}

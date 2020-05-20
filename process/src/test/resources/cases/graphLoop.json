@@ -1,0 +1,50 @@
+{
+  "pid": "xyz",
+  "description": "Simple GAN with loop element",
+  "startGuard": "guard_one",
+  "finishGuard": "guard_exit",
+
+  "guards": [
+    {
+      "id": "guard_one",
+      "type": "and",
+      "slots": [{ "type":  "prefix", "prefix":  "xyz/interation_input" }],
+      "action": "loop_iteration"
+    },
+    {
+      "id": "loop_iteration_guard",
+      "type": "and",
+      "slots": [{ "type":  "prefix", "prefix":  "xyz/interation_input" }],
+      "action": ["loop_iteration"]
+    },
+    {
+      "id": "final_action_guard",
+      "type": "and",
+      "slots": [],
+      "action": ["final_action"]
+    },
+    {
+      "id": "guard_exit",
+      "type": "and",
+      "slots": [],
+      "action": []
+    }
+  ],
+
+  "guardRelations": [],
+
+  "actions": [
+    {
+      "id": "loop_iteration",
+      "type": "RemoteIteration",
+      "runGuards": ["loop_iteration_guard", "final_action_guard"],
+      "config": {}
+    },
+    {
+      "id": "final_action",
+      "type": "TestAction",
+      "runGuards": ["guard_exit"],
+      "config": {}
+    }
+  ]
+}
