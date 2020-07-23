@@ -5,6 +5,7 @@ import io.losos.Framework
 import io.losos.common.StringADescriptor
 import io.losos.etcd.EtcdEventBus
 import io.losos.eventbus.Event
+import io.losos.eventbus.EventBus
 import io.losos.executor.KotlinTaskExecutor
 import io.losos.process.engine.IDGenUUID
 import io.losos.process.engine.ProcessManager
@@ -12,9 +13,32 @@ import io.losos.process.model.GANDef
 import org.junit.Test
 import java.io.File
 
-class AgentTaskActionTest {
 
-    @Test fun testDirectSchedule() {
+open class LososTest {
+
+    fun onEventBus(block: (EventBus) -> Unit) {
+        connectToEtcd(Framework.Test.ETCD_URLS) {client ->
+            val eventBus = EtcdEventBus(client)
+            block(eventBus)
+        }
+    }
+
+
+    fun withProcessManagerEtcdEB(block: LososTest.(EventBus, ProcessManager) -> Unit) {
+
+        onEventBus { bus ->
+            val pm = ProcessManager(bus, IDGenUUID)
+            pm.startBrokering()
+            this.block(bus, pm)
+            pm.stopBrokering()
+        }
+    }
+
+}
+
+class AgentTaskActionTest: LososTest() {
+
+    @Test fun directScheduleSuccess() = withProcessManagerEtcdEB { eventBus, pm ->
         Framework.init(mapOf(
                 "process" to true,
                 "etcdbus" to false,
@@ -22,16 +46,13 @@ class AgentTaskActionTest {
                 "testDirectSchedule" to false
         ))
 
-
         val log = io.losos.logger("testDirectSchedule")
         val ganDef = Framework
                 .jsonMapper
                 .readValue(File("src/test/resources/cases/graphAgentTaskAction.json"), GANDef::class.java)
 
-        connectToEtcd(Framework.Test.ETCD_URLS) { client ->
-            val eventBus = EtcdEventBus(client)
 
-            val executor = KotlinTaskExecutor.runExecutor(
+        val executor = KotlinTaskExecutor.runExecutor(
                     agentName = "agent1",
                     eventBus = eventBus,
                     descriptor = StringADescriptor("taskType")) { input ->
@@ -40,26 +61,26 @@ class AgentTaskActionTest {
                 Framework.jsonMapper
                         .createObjectNode()
                         .put("response", "ok")
-            }
-
-
-            val pm = ProcessManager(eventBus, IDGenUUID)
-            pm.startBrokering()
-
-            val gan = pm.createProcess(ganDef)
-
-            eventBus.subscribe(gan.context.contextPath()) {
-                log(it.toString())
-            }
-
-            gan.run()
-
-            Thread.sleep(5)
-            eventBus.emit("${gan.context.contextPath()}/start", Event.emptyPayload())
-
-            gan.joinThread(10000)
-            io.losos.log("done")
         }
+
+
+        val gan = pm.createProcess(ganDef)
+
+        eventBus.subscribe(gan.context.contextPath()) {
+                log(it.toString())
+        }
+
+        gan.run()
+
+        Thread.sleep(5)
+        eventBus.emit("${gan.context.contextPath()}/start", Event.emptyPayload())
+
+        gan.joinThread(10000)
+        io.losos.log("done")
+    }
+
+    @Test fun testOneTimeoutDirectSchedule() {
+
     }
 
 }

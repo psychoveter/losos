@@ -11,11 +11,13 @@ data class AgentDef<T: AgentDescriptor>(
 )
 
 interface AgentRegistry<T: AgentDescriptor> {
+
     suspend fun getAgents(): List<AgentDef<T>>
 
     suspend fun getAgents(selector: AgentSelector<T>): List<AgentDef<T>> {
         return getAgents().filter { selector.match(it.descriptor) }
     }
+
 }
 
 
