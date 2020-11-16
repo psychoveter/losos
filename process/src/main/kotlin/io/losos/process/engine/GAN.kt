@@ -4,6 +4,8 @@ import io.losos.JsonObj
 import io.losos.eventbus.Event
 import io.losos.eventbus.EventBus
 import io.losos.actor.Actor
+import io.losos.process.engine.exc.GANException
+import io.losos.process.engine.exc.WorkException
 import io.losos.process.model.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -139,7 +141,7 @@ class GAN(
 
     //------------------------------------------------------------------------------------------------------------------
 
-    @Throws(TaskActionException::class)
+    @Throws(GANException::class)
     /**
      * There should be some action chunk emitted by business logic actions.
      * These action chunks are ordered actions leading to publishing of events.
@@ -164,7 +166,6 @@ class GAN(
                 publishGuard(message.guard)
             }
             is CmdGuardOpen -> {
-                //execute guarded action
                 message.guard.state = GuardState.OPENED
                 handleRelatedGuards(message.guard)
                 handleGuardOpen(message.guard, message.guard.action)
@@ -193,7 +194,7 @@ class GAN(
                 try {
                     message.block(this)
                 } catch (e: Exception) {
-                    throw TaskActionException(e)
+                    throw WorkException(e)
                 }
             }
             is CmdAction -> {
@@ -201,7 +202,7 @@ class GAN(
                 val cmds = try {
                     message.action.execute(ActionInput(message.firedGuard.slots))
                 } catch (e: Exception) {
-                    throw TaskActionException(e)
+                    throw GANException(e)
                 }
                 cmds.forEach{send(it)}
             }
@@ -217,7 +218,7 @@ class GAN(
     }
 
     private suspend fun handleRelatedGuards(guard: Guard) {
-        //remove related XOR guards
+        //cancel and remove related XOR guards
         val xorGuards: List<Guard> = context.filterXorGuards(guard.def.id, activeGuards)
         xorGuards.forEach {
             if(it.state == GuardState.WAITING) {

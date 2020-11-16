@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.losos.process.actions.AgentTaskActionDef
 import io.losos.process.actions.TestActionDef
-import java.lang.RuntimeException
 
 
 data class ActionInput(val slots: Map<String, Slot>) {
@@ -19,9 +18,6 @@ interface Action<T: ActionDef> {
     val def: T
     suspend fun execute(input: ActionInput): List<CmdGAN>
 }
-
-
-class TaskActionException(cause: Throwable): RuntimeException(cause)
 
 
 abstract class AbstractAction<T: ActionDef>(
