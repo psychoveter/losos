@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
 import io.losos.eventbus.Event
+import io.losos.process.model.SlotDef
 import java.lang.IllegalStateException
 import kotlin.reflect.KClass
 
@@ -66,19 +67,6 @@ class VarSlot(
 
 //==defenitions=========================================================================================================
 
-@JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.PROPERTY,
-        property = "type"
-)
-@JsonSubTypes(
-        JsonSubTypes.Type(value = EventOnGuardSlotDef::class, name = "event_on_guard"),
-        JsonSubTypes.Type(value = EventCustomSlotDef::class, name = "event_custom"),
-        JsonSubTypes.Type(value = VarSlotDef::class, name = "var")
-)
-open class SlotDef(
-    open val name: String
-)
 
 
 

@@ -35,27 +35,24 @@ class ProcessManager (
 
     companion object {
         val PATH_PROC_STATE     = "/proc/state"
-        val PATH_PROC_REGISTRY_ = "/proc/registry"
+        val PATH_PROC_REGISTRY  = "/proc/registry"
         val PATH_PROC_LEASE     = "/proc/lease"
     }
 
     private var job: Job? = null
 
     private val subscriptions = ConcurrentHashMap<String, MutableList<Subscription>>()
-    private val slots     = ConcurrentHashMap<String, MutableList<EventSlot>>()
+    private val slots         = ConcurrentHashMap<String, MutableList<EventSlot>>()
     private val gans          = ConcurrentHashMap<String, GAN>()
 
     private val busChannel = Channel<Event>()
 
     @Volatile private var isStarted = false
 
-    /**
-     * Restores process from history events at the point it was terminated
-     */
-    fun restoreProcess(): GAN {
-        TODO("Not implemented")
-    }
 
+    /**
+     * Create new process and subscribe it for it's related events
+     */
     fun createProcess(def: GANDef): GAN {
         val pid = idGenerator.newUniquePID()
         slots[pid] = CopyOnWriteArrayList()
@@ -67,6 +64,20 @@ class ProcessManager (
             busChannel.send(it)
         })
         return gan
+    }
+
+    /**
+     * Restores process from history events at the point it was terminated
+     */
+    fun restoreProcess(): GAN {
+        TODO("Not implemented")
+    }
+
+    /**
+     * Deletes process from registry and cleans up all it's state
+     */
+    fun deleteProcess(pid: String) {
+        TODO("not implemented")
     }
 
     fun startBrokering() {

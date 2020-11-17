@@ -72,7 +72,7 @@ data class CmdAction(val action: Action<*>, val firedGuard: Guard): CmdGAN
 
 
 /**
- * Guard action network
+ * Guard-action network
  */
 class GAN(
     val def: GANDef,

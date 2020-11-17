@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.losos.process.actions.AgentTaskActionDef
 import io.losos.process.actions.TestActionDef
+import io.losos.process.model.ActionDef
 
 
 data class ActionInput(val slots: Map<String, Slot>) {
@@ -42,7 +43,7 @@ abstract class AbstractAction<T: ActionDef>(
         return guard
     }
 
-    fun work(block: GAN.() -> Unit) {
+    fun scheduleOnProcess(block: GAN.() -> Unit) {
         cmds.add(CmdWork(block))
     }
 
@@ -51,18 +52,3 @@ abstract class AbstractAction<T: ActionDef>(
 }
 
 
-//==definitions=========================================================================================================
-
-@JsonTypeInfo(
-    use = JsonTypeInfo.Id.NAME,
-    include = JsonTypeInfo.As.PROPERTY,
-    property = "type"
-)
-@JsonSubTypes(
-        JsonSubTypes.Type(value = TestActionDef::class, name = "test"),
-        JsonSubTypes.Type(value = AgentTaskActionDef::class, name = "agent_task")
-)
-open class ActionDef (
-    open val id: String,
-    open val runGuards: List<String>
-)

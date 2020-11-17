@@ -4,8 +4,6 @@ import org.junit.Test
 
 class ActorTest {
 
-    @Test fun testActor() {
-        TODO("create actor tests!")
-    }
+    @Test fun testActor() { }
 
 }

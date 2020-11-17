@@ -4,5 +4,6 @@ plugins {
 }
 
 dependencies {
+    compile "org.slf4j:slf4j-api:1.7.29"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }

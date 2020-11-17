@@ -32,7 +32,6 @@ class AgentTaskAction(
         if ( taskCtx.attempt == 0L ) {
             when(def.schedulePolicy.policy) {
                 SchedulePolicyType.DIRECT -> {
-
                     //fire success guard
                     val gSuccess = guard(def.guardSuccess) {
                         slot(SLOT_RESPONSE)
@@ -47,7 +46,7 @@ class AgentTaskAction(
                     val gFailure = guard(def.guardFailure) {
                         slot(SLOT_EXCEPTION)
                     }
-                    work {
+                    scheduleOnProcess {
                         placeTask(
                                 this.context,
                                 self.def.schedulePolicy.agentId!!,
@@ -71,7 +70,7 @@ class AgentTaskAction(
         if ( taskCtx.attempt > 0L ) {
             when(def.schedulePolicy.reschedulePolicy) {
                 ReschedulePolicyType.THE_SAME -> {
-                    work {
+                    scheduleOnProcess {
                         placeTask(this.context, taskCtx.previousAgent!!, inputSlots,
                                 "",
                                 "",

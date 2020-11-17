@@ -1,5 +1,6 @@
 package io.losos.etcd
 
+
 import io.losos.JsonObj
 import io.losos.eventbus.Event
 import io.losos.eventbus.EventBus
@@ -18,6 +19,7 @@ import io.losos.common.AgentDescriptor
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.collections.HashMap
@@ -31,7 +33,7 @@ class EtcdEventBus(
         val client: Client
 ): EventBus {
 
-    val log = io.losos.logger("etcdbus")
+    private val logger = LoggerFactory.getLogger(this::class.java)
 
     class EtcdSubscription(
         override val id: String,
@@ -53,7 +55,7 @@ class EtcdEventBus(
                         .build(),
                 block = { response ->
                     response.events.forEach { e -> GlobalScope.launch {
-                            log("[${Thread.currentThread().name}] received event: ${e.stringify()}")
+                            logger.debug("[${Thread.currentThread().name}] received event: ${e.stringify()}")
                             try {
                                 val key = EventBus.bytes2string(e.keyValue.key)
                                 if ( key.startsWith(EventBus.PREFIX_AGENT_LEASE) ) {
@@ -66,8 +68,7 @@ class EtcdEventBus(
                                     callback(EventImpl(key, value))
                                 }
                             } catch (exc: Exception) {
-                                log("Failed to parse event: e[${e.stringify()}], exc: ${exc.toString()}")
-                                exc.printStackTrace()
+                                logger.error("Failed to parse event: e[${e.stringify()}]", e)
                             }
                         }
                     }
@@ -84,14 +85,14 @@ class EtcdEventBus(
                 keyName = path,
                 block = { response ->
                     response.events.forEach { e ->
-                        //log("[${Thread.currentThread().name}] received event: ${e.stringify()}")
+                        logger.debug("[${Thread.currentThread().name}] received event: ${e.stringify()}")
                         when (e.eventType) {
                             WatchEvent.EventType.DELETE-> GlobalScope.launch {
                                 try {
                                     val key   = EventBus.bytes2string(e.keyValue.key)
                                     callback(EventImpl(key, Event.emptyPayload()))
                                 } catch (exc: Exception) {
-                                    log("Failed to parse event: e[${e.stringify()}], exc: ${exc.toString()}")
+                                    logger.error("Failed to parse event: e[${e.stringify()}]", exc)
                                 }
                             }
                             else -> {}
@@ -106,7 +107,7 @@ class EtcdEventBus(
     }
 
     override fun emit(path: String, payload: JsonObj) {
-        log("Emit event ${path}:${payload}")
+        logger.debug("Emit event ${path}:${payload}")
         client.putValue(path, EventBus.fromJson(payload))
     }
 
@@ -149,7 +150,7 @@ class EtcdEventBus(
 
     override fun register(agentName: String, descriptor: AgentDescriptor) {
         val path = "${EventBus.PREFIX_AGENTS}/$agentName"
-        log("Registering agent $agentName at path $path")
+        logger.debug("Registering agent $agentName at path $path")
         emit(path, descriptor.toJson())
     }
 

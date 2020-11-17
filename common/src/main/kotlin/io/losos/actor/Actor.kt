@@ -5,12 +5,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import org.slf4j.LoggerFactory
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 
 abstract class Actor<T> {
 
+    private val logger = LoggerFactory.getLogger(this::class.java)
     private val mailbox = Channel<T>(Channel.UNLIMITED)
     private var job: Job? = null
     /**
