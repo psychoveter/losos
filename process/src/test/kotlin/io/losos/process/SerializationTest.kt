@@ -3,7 +3,6 @@ package io.losos.process
 import io.losos.Framework
 import io.losos.process.actions.TestActionDef
 import io.losos.process.engine.EventOnGuardSlotDef
-import io.losos.process.engine.PrefixSelectorDef
 import io.losos.process.model.*
 import org.junit.Assert
 import org.junit.Test
@@ -20,7 +19,7 @@ class SerializationTest {
         val g = GuardDef("g1", mapOf(slot1.name to slot1, slot2.name to slot2), GuardType.AND, "action1")
         val action1 = TestActionDef("action1", listOf())
 
-        val gan = GANDef(
+        val gan = ProcessDef(
                 name =  "p1",
                 description = "sample process",
                 startGuard = "g1",
@@ -33,7 +32,7 @@ class SerializationTest {
         val string = Framework.jsonMapper.writeValueAsString(gan)
         println(string)
 
-        val gg = Framework.jsonMapper.readValue(string, GANDef::class.java)
+        val gg = Framework.jsonMapper.readValue(string, ProcessDef::class.java)
 
         val string2 = Framework.jsonMapper.writeValueAsString(gg)
 

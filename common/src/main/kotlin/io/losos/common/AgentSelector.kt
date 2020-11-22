@@ -1,11 +1,11 @@
 package io.losos.common
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.Framework
-import io.losos.JsonObj
 
 
 interface AgentDescriptor {
-    fun toJson(): JsonObj
+    fun toJson(): ObjectNode
 }
 
 interface AgentSelector<T: AgentDescriptor> {
@@ -17,11 +17,11 @@ interface AgentSelector<T: AgentDescriptor> {
 class StringADescriptor(val key: String): AgentDescriptor {
 
     companion object {
-        fun fromJson(json: JsonObj): StringADescriptor = Framework
+        fun fromJson(json: ObjectNode): StringADescriptor = Framework
                 .json2object(json, StringADescriptor::class.java)
     }
 
-    override fun toJson(): JsonObj = Framework.jsonMapper
+    override fun toJson(): ObjectNode = Framework.jsonMapper
                     .createObjectNode()
                     .put("key", key)
 

@@ -1,17 +1,18 @@
 package io.losos.process.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.Framework
-import io.losos.JsonObj
-import io.losos.eventbus.Event
-import io.losos.eventbus.EventBus
+import io.losos.platform.Event
+import io.losos.platform.LososPlatform
 import io.losos.common.AgentTask
 import io.losos.process.engine.*
+import io.losos.process.model.ActionDef
 import java.util.*
 
 class AgentTaskAction(
         def: AgentTaskActionDef,
-        ctx: GANContext
+        ctx: ProcessContext
 ): AbstractAction<AgentTaskActionDef>(def, ctx) {
 
     private val self = this
@@ -23,9 +24,9 @@ class AgentTaskAction(
     }
 
     override suspend fun action(input: ActionInput) {
-        log("start agent task action")
-        val taskCtx: AgentTaskCtx = with(input[SLOT_CTX]){ this?.payload as? AgentTaskCtx} ?: AgentTaskCtx(0, null)
-        val exception: Event? = with(input[SLOT_EXCEPTION]){ this?.event }
+        logInfo("start agent task action")
+        val taskCtx: AgentTaskCtx = with(input[SLOT_CTX]){ this?.data as? AgentTaskCtx} ?: AgentTaskCtx(0, null)
+        val exception: Event<ObjectNode>? = with(input[SLOT_EXCEPTION]){ this?.data }
         val inputSlots: Map<String, Slot> = input.slots.filterKeys { it != SLOT_CTX.name && it != SLOT_EXCEPTION.name }
 
         //first run
@@ -35,12 +36,12 @@ class AgentTaskAction(
                     //fire success guard
                     val gSuccess = guard(def.guardSuccess) {
                         slot(SLOT_RESPONSE)
-                        slot(SLOT_CTX) { payload = taskCtx }
+                        slot(SLOT_CTX) { withPayload(taskCtx) }
                     }
                     //fire failure_light guard
                     val gRetry = guard(def.guardRetry) {
                         slot(SLOT_EXCEPTION)
-                        slot(SLOT_CTX) { payload = taskCtx }
+                        slot(SLOT_CTX) { withPayload(taskCtx) }
                     }
                     //fire failure_total guard
                     val gFailure = guard(def.guardFailure) {
@@ -56,11 +57,12 @@ class AgentTaskAction(
                                 gFailure[SLOT_EXCEPTION].eventPath()
                         )
                     }
-
                 }
+
                 SchedulePolicyType.TAGS_LEAST_LOADED -> {
                     TODO("Unsupported schedule policy")
                 }
+
                 SchedulePolicyType.CRITERION -> {
                     TODO("Unsupported schedule policy")
                 }
@@ -89,19 +91,19 @@ class AgentTaskAction(
     }
 
     private fun placeTask(
-            ganCtx: GANContext,
-            agentId: String,
-            input: Map<String, Slot>,
-            successEventPath: String,
-            retryEventPath: String,
-            failureEventPath: String
+        processCtx: ProcessContext,
+        agentId: String,
+        input: Map<String, Slot>,
+        successEventPath: String,
+        retryEventPath: String,
+        failureEventPath: String
     ) {
         val id = UUID.randomUUID().toString()
-        val payload: JsonObj = Framework.jsonMapper.createObjectNode()
-        log("Place task $id at agent $agentId")
+        val payload: ObjectNode = Framework.jsonMapper.createObjectNode()
+        logInfo("Place task $id at agent $agentId")
 
         input.values.filterIsInstance<EventOnGuardSlot>()
-             .forEach { payload.set<JsonObj>(it.id, it.event?.payload) }
+             .forEach { payload.set<ObjectNode>(it.id, it.data?.payload) }
 
         //TODO add taskId and retry counter to task path and id
         val task = AgentTask(
@@ -112,14 +114,16 @@ class AgentTaskAction(
                 retryEventPath = retryEventPath,
                 failureEventPath = failureEventPath
         )
-        ganCtx.eventBus().emit(EventBus.agentTaskPath(agentId, task.id), Framework.object2json(task))
+
+        processCtx.nodeManager().platform
+            .put(LososPlatform.agentTaskPath(agentId, task.id), Framework.object2json(task))
     }
 }
 
 data class AgentTaskCtx(
     val attempt: Long = 0,
     val previousAgent: String? = null,
-    val payload: JsonObj = Event.emptyPayload()
+    val payload: ObjectNode = Event.emptyPayload()
 ) {
     fun addAttempt() = AgentTaskCtx(attempt + 1, previousAgent, payload)
     fun addAttemptOnNewAgent(agentId: String) = AgentTaskCtx(attempt + 1, agentId, payload)

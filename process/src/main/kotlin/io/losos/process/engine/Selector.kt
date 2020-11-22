@@ -3,17 +3,18 @@ package io.losos.process.engine
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.JsonTypeName
-import io.losos.eventbus.Event
+import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.platform.Event
 
 
 //==entities============================================================================================================
 
 interface Selector {
-    fun check(e: Event): Boolean
+    fun check(e: Event<ObjectNode>): Boolean
 }
 
 class PrefixSelector(val prefix: String): Selector {
-    override fun check(e: Event): Boolean = e.fullPath.startsWith(prefix)
+    override fun check(e: Event<ObjectNode>): Boolean = e.fullPath.startsWith(prefix)
 }
 
 

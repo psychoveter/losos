@@ -29,23 +29,31 @@ subprojects {
 
 project("common") {}
 
-project("eventbus") {
-    dependencies {
-        compile project(":common")
-    }
-}
+
 
 project("executor") {
     dependencies {
         compile project(":common")
-        compile project(":eventbus")
     }
 }
 
 project("process") {
     dependencies {
         compile project(":common")
-        compile project(":eventbus")
         compile project(":executor")
+    }
+}
+
+project("platform-controller") {
+    dependencies {
+        compile project(":common")
+        compile project(":process")
+    }
+}
+
+project("satellite") {
+    dependencies {
+        compile project(":common")
+        compile project(":process")
     }
 }

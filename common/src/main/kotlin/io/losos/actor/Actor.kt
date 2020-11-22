@@ -1,5 +1,6 @@
 package io.losos.actor
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -33,6 +34,7 @@ abstract class Actor<T> {
         }
         return job!!
     }
+
 
     suspend fun joinCoroutine(timeout: Long = Long.MAX_VALUE) = withTimeout(timeout) {
         job?.join()

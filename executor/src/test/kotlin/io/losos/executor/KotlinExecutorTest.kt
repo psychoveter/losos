@@ -2,12 +2,11 @@ package io.losos.executor
 
 import io.etcd.recipes.common.connectToEtcd
 import io.losos.Framework
-import io.losos.etcd.EtcdEventBus
-import io.losos.eventbus.EventBus
+import io.losos.platform.etcd.EtcdLososPlatform
+import io.losos.platform.LososPlatform
 import io.losos.common.AgentTask
 import io.losos.common.StringADescriptor
 import org.junit.Test
-import java.awt.Frame
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -33,9 +32,9 @@ class KotlinExecutorTest {
                 id = taskId,
                 type = taskType,
                 payload = taskPayload,
-                successEventPath = "${EventBus.PREFIX_TASKS_STATE}/$taskId/success",
-                retryEventPath = "${EventBus.PREFIX_TASKS_STATE}/$taskId/retry",
-                failureEventPath = "${EventBus.PREFIX_TASKS_STATE}/$taskId/failure"
+                successEventPath = "${LososPlatform.PREFIX_TASKS_STATE}/$taskId/success",
+                retryEventPath = "${LososPlatform.PREFIX_TASKS_STATE}/$taskId/retry",
+                failureEventPath = "${LososPlatform.PREFIX_TASKS_STATE}/$taskId/failure"
 
         )
 
@@ -43,10 +42,10 @@ class KotlinExecutorTest {
         val executorLeased = CountDownLatch(1)
 
         connectToEtcd(Framework.Test.ETCD_URLS) { client ->
-            val bus = EtcdEventBus(client)
+            val bus = EtcdLososPlatform(client)
 
             //bus.subscribe(EventBus.agentTasksPath(agentName)) { log(it.toString()) }
-            bus.subscribe(EventBus.PREFIX_AGENT_LEASE) {
+            bus.subscribe(LososPlatform.PREFIX_AGENT_LEASE) {
                 log(it.toString())
                 if(it.payload["action"].textValue() == "DELETE")
                     executorLeased.countDown()
@@ -67,7 +66,7 @@ class KotlinExecutorTest {
 
             Thread.sleep(500)
 
-            bus.emit(EventBus.agentTaskPath(agentName, task.id), Framework.object2json(task))
+            bus.put(LososPlatform.agentTaskPath(agentName, task.id), Framework.object2json(task))
 
             executorLeased.await(10, TimeUnit.SECONDS)
 

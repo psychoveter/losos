@@ -3,7 +3,7 @@ package io.losos.process.agent
 import io.losos.common.AgentDescriptor
 import io.losos.common.AgentSelector
 import io.losos.common.StringADescriptor
-import io.losos.eventbus.EventBus
+import io.losos.platform.LososPlatform
 
 data class AgentDef<T: AgentDescriptor>(
         val name: String,
@@ -25,11 +25,11 @@ interface AgentRegistry<T: AgentDescriptor> {
 /**
  * Simple agent registry which performs all operations by direct queries to event bus
  */
-class EtcdAgentManagerV1(val eventBus: EventBus): AgentRegistry<StringADescriptor> {
+class EtcdAgentManagerV1(val eventBus: LososPlatform): AgentRegistry<StringADescriptor> {
 
     override suspend fun getAgents(): List<AgentDef<StringADescriptor>> {
         return eventBus
-                .readPrefix("${EventBus.PREFIX_AGENTS}/")
+                .readPrefix("${LososPlatform.PREFIX_AGENTS}/")
                 .entries
                 .map { AgentDef(it.key, StringADescriptor.fromJson(it.value)) }
                 .toList()
@@ -41,7 +41,7 @@ class EtcdAgentManagerV1(val eventBus: EventBus): AgentRegistry<StringADescripto
 /**
  * Reactive agent registry which reflects state of the registry in reactive manner
  */
-class EtcdAgentManagerV2(val eventBus: EventBus): AgentRegistry<StringADescriptor> {
+class EtcdAgentManagerV2(val eventBus: LososPlatform): AgentRegistry<StringADescriptor> {
     override suspend fun getAgents(): List<AgentDef<StringADescriptor>> {
         TODO("Not yet implemented")
     }

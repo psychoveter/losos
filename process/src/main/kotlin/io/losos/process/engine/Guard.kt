@@ -1,9 +1,10 @@
 package io.losos.process.engine
 
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.Framework
-import io.losos.JsonObj
-import io.losos.eventbus.Event
+import io.losos.platform.Event
+import io.losos.process.actions.Action
 import io.losos.process.model.GuardDef
 import io.losos.process.model.GuardState
 import io.losos.process.model.GuardType
@@ -31,14 +32,14 @@ import java.lang.RuntimeException
  * Any logical control flow behaviour can be implemented with action-guard semantics.
  */
 class Guard(
-        val def: GuardDef,
-        val type: GuardType,
-        val context: ProcessManager.ProcessContext,
-        val action: Action<*>?,
-        val slots: MutableMap<String, Slot> = mutableMapOf(),
-        val timeout: Long = -1,
-        val timeoutAction: Action<*>? = null,
-        val incarnation: Int = 1
+    val def: GuardDef,
+    val type: GuardType,
+    val context: ProcessManager.ProcessContext,
+    val action: Action<*>?,
+    val slots: MutableMap<String, Slot> = mutableMapOf(),
+    val timeout: Long = -1,
+    val timeoutAction: Action<*>? = null,
+    val incarnation: Int = 1
 ) {
     val log = io.losos.logger("Guard(${def.id})")
 
@@ -51,7 +52,7 @@ class Guard(
     var cancelledBy: Guard? = null
         internal set
 
-    internal fun accept(e: Event): Boolean = slots.values
+    internal fun accept(e: Event<ObjectNode>): Boolean = slots.values
             .filterIsInstance<EventOnGuardSlot>()
             .filter { it.isEmpty() }
             .map { it.accept(e) }
@@ -99,7 +100,7 @@ class Guard(
     @Suppress("UNCHECKED_CAST")
     operator fun <T: Slot> get(id: SlotId<T>): T = slots[id.name]!! as T
 
-    fun path(): String = "${context.contextPath()}/guard/${def.id}/1"
+    fun path(): String = "${context.pathState()}/guard/${def.id}/1"
 
     //--creation--------------------------------------------------------------------------------------------------------
 
@@ -130,7 +131,7 @@ class Guard(
         val selectorDef = slotDef.selector
         val selector = when(selectorDef) {
             is PrefixSelectorDef -> if (selectorDef.absolute) PrefixSelector(selectorDef.prefix)
-            else PrefixSelector(this.context.contextPath() + "/" + selectorDef.prefix)
+            else PrefixSelector(this.context.pathState() + "/" + selectorDef.prefix)
             else -> throw RuntimeException("Unknown selector type ${selectorDef.toString()}")
         }
         return EventCustomSlot(slotDef.name, this, selector)
@@ -146,7 +147,7 @@ class Guard(
 
     override fun toString() = "Guard[${def.id}, state: $state, to: $timeout, toact: ${timeoutAction?.def?.id}]"
 
-    fun stateJson(): JsonObj = Framework.jsonMapper.createObjectNode()
+    fun stateJson(): ObjectNode = Framework.jsonMapper.createObjectNode()
                                                     .put("state", state.name)
 
 }

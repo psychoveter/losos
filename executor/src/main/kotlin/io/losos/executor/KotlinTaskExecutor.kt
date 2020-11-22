@@ -1,19 +1,19 @@
 package io.losos.executor
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.Framework
-import io.losos.JsonObj
 import io.losos.actor.Actor
-import io.losos.eventbus.EventBus
-import io.losos.eventbus.Subscription
+import io.losos.platform.LososPlatform
+import io.losos.platform.Subscription
 import io.losos.common.AgentDescriptor
 import io.losos.common.AgentTask
 import java.lang.Exception
 
 class KotlinTaskExecutor(
-        val agentName: String,
-        val eventBus: EventBus,
-        val descriptor: AgentDescriptor,
-        val block: (input: AgentTask) -> JsonObj
+    val agentName: String,
+    val eventBus: LososPlatform,
+    val descriptor: AgentDescriptor,
+    val block: (input: AgentTask) -> ObjectNode
 ): Actor<AgentTask>() {
 
     private fun log(msg: String) {
@@ -26,21 +26,21 @@ class KotlinTaskExecutor(
          * Run blocking
          */
         fun runExecutor(
-                agentName: String,
-                eventBus: EventBus,
-                descriptor: AgentDescriptor,
-                block: (input: AgentTask) -> JsonObj
+            agentName: String,
+            eventBus: LososPlatform,
+            descriptor: AgentDescriptor,
+            block: (input: AgentTask) -> ObjectNode
         ) {
             val executor = KotlinTaskExecutor(agentName, eventBus, descriptor, block)
-            eventBus.runInKeepAlive("${EventBus.PREFIX_AGENT_LEASE}/$agentName") {
+            eventBus.runInKeepAlive("${LososPlatform.PREFIX_AGENT_LEASE}/$agentName") {
                 executor.run()
             }
         }
     }
 
-    private val tasksPath = EventBus.agentTasksPath(agentName)
+    private val tasksPath = LososPlatform.agentTasksPath(agentName)
 
-    private var jobsSubscription: Subscription? = null
+    private var jobsSubscription: Subscription<ObjectNode>? = null
 
 
     override suspend fun beforeStart() {
@@ -88,8 +88,8 @@ class KotlinTaskExecutor(
         }
     }
 
-    private fun success(input: AgentTask, result: JsonObj?) {
-        eventBus.emit(
+    private fun success(input: AgentTask, result: ObjectNode?) {
+        eventBus.put(
                 input.successEventPath,
                 result?:Framework.jsonMapper.createObjectNode()
         )
@@ -99,7 +99,7 @@ class KotlinTaskExecutor(
     private fun retry(input: AgentTask, e: Throwable?) {
         val payload = if( e == null ) Framework.jsonMapper.createObjectNode()
         else Framework.jsonMapper.createObjectNode().put("reason", e.message)
-        eventBus.emit(
+        eventBus.put(
                 input.retryEventPath,
                 payload
         )
@@ -108,7 +108,7 @@ class KotlinTaskExecutor(
     private fun failure(input: AgentTask, e: Throwable?) {
         val payload = if( e == null ) Framework.jsonMapper.createObjectNode()
                       else Framework.jsonMapper.createObjectNode().put("reason", e.message)
-        eventBus.emit(
+        eventBus.put(
                 input.failureEventPath,
                 payload
         )

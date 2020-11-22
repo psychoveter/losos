@@ -3,28 +3,28 @@ package io.losos.process.agent
 import io.etcd.recipes.common.connectToEtcd
 import io.losos.Framework
 import io.losos.common.StringADescriptor
-import io.losos.etcd.EtcdEventBus
-import io.losos.eventbus.Event
-import io.losos.eventbus.EventBus
+import io.losos.platform.etcd.EtcdLososPlatform
+import io.losos.platform.Event
+import io.losos.platform.LososPlatform
 import io.losos.executor.KotlinTaskExecutor
 import io.losos.process.engine.IDGenUUID
 import io.losos.process.engine.ProcessManager
-import io.losos.process.model.GANDef
+import io.losos.process.model.ProcessDef
 import org.junit.Test
 import java.io.File
 
 
 open class LososTest {
 
-    fun onEventBus(block: (EventBus) -> Unit) {
+    fun onEventBus(block: (LososPlatform) -> Unit) {
         connectToEtcd(Framework.Test.ETCD_URLS) {client ->
-            val eventBus = EtcdEventBus(client)
+            val eventBus = EtcdLososPlatform(client)
             block(eventBus)
         }
     }
 
 
-    fun withProcessManagerEtcdEB(block: LososTest.(EventBus, ProcessManager) -> Unit) {
+    fun withProcessManagerEtcdEB(block: LososTest.(LososPlatform, ProcessManager) -> Unit) {
 
         onEventBus { bus ->
             val pm = ProcessManager(bus, IDGenUUID)
@@ -49,7 +49,7 @@ class AgentTaskActionTest: LososTest() {
         val log = io.losos.logger("testDirectSchedule")
         val ganDef = Framework
                 .jsonMapper
-                .readValue(File("src/test/resources/cases/graphAgentTaskAction.json"), GANDef::class.java)
+                .readValue(File("src/test/resources/cases/graphAgentTaskAction.json"), ProcessDef::class.java)
 
 
         val executor = KotlinTaskExecutor.runExecutor(
@@ -66,14 +66,14 @@ class AgentTaskActionTest: LososTest() {
 
         val gan = pm.createProcess(ganDef)
 
-        eventBus.subscribe(gan.context.contextPath()) {
+        eventBus.subscribe(gan.context.pathState()) {
                 log(it.toString())
         }
 
         gan.run()
 
         Thread.sleep(5)
-        eventBus.emit("${gan.context.contextPath()}/start", Event.emptyPayload())
+        eventBus.put("${gan.context.pathState()}/start", Event.emptyPayload())
 
         gan.joinThread(10000)
         io.losos.log("done")

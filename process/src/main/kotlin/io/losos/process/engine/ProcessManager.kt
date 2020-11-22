@@ -1,51 +1,33 @@
 package io.losos.process.engine
 
-import io.losos.eventbus.Event
-import io.losos.eventbus.EventBus
-import io.losos.eventbus.Subscription
-import io.losos.process.actions.AgentTaskAction
-import io.losos.process.actions.AgentTaskActionDef
-import io.losos.process.actions.TestAction
-import io.losos.process.actions.TestActionDef
+import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.platform.Event
+import io.losos.platform.Subscription
+import io.losos.process.actions.*
 import io.losos.process.model.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 import java.lang.RuntimeException
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 
-interface IDGenerator {
-    fun newUniquePID(): String
-}
-
-object IDGenUUID: IDGenerator {
-    override fun newUniquePID(): String = UUID.randomUUID().toString()
-}
-
 class ProcessManager (
-        private val eventBus: EventBus,
-        private val idGenerator: IDGenerator
+    val nodeManager: NodeManager
 ) {
 
-    val log = io.losos.logger("pm")
-
-    companion object {
-        val PATH_PROC_STATE     = "/proc/state"
-        val PATH_PROC_REGISTRY  = "/proc/registry"
-        val PATH_PROC_LEASE     = "/proc/lease"
-    }
+    private val logger = LoggerFactory.getLogger(ProcessManager::class.java)
 
     private var job: Job? = null
 
-    private val subscriptions = ConcurrentHashMap<String, MutableList<Subscription>>()
+    private val processes     = ConcurrentHashMap<String, Process>()
+    private val subscriptions = ConcurrentHashMap<String, MutableList<Subscription<ObjectNode>>>()
     private val slots         = ConcurrentHashMap<String, MutableList<EventSlot>>()
-    private val gans          = ConcurrentHashMap<String, GAN>()
 
-    private val busChannel = Channel<Event>()
+    private val busChannel = Channel<Event<ObjectNode>>()
 
     @Volatile private var isStarted = false
 
@@ -53,49 +35,56 @@ class ProcessManager (
     /**
      * Create new process and subscribe it for it's related events
      */
-    fun createProcess(def: GANDef): GAN {
-        val pid = idGenerator.newUniquePID()
+    fun createProcess(def: ProcessDef): Process {
+        val pid = nodeManager.idGen.newUniquePID()
         slots[pid] = CopyOnWriteArrayList()
         subscriptions[pid] = CopyOnWriteArrayList()
         val context = ProcessContext(pid, def)
-        val gan = GAN(def, context)
-        gans[pid] = gan
-        subscriptions[pid]!!.add(eventBus.subscribe(context.contextPath()) {
+        val gan = Process(pid, def, context)
+        processes[pid] = gan
+        subscriptions[pid]!!.add(nodeManager.platform.subscribe(context.pathState()) {
             busChannel.send(it)
         })
+
+        nodeManager.platform.put(gan.context.pathRegistry(), Event.emptyPayload())
+
         return gan
     }
 
     /**
      * Restores process from history events at the point it was terminated
      */
-    fun restoreProcess(): GAN {
+    fun restoreProcess(): Process {
         TODO("Not implemented")
     }
 
     /**
      * Deletes process from registry and cleans up all it's state
      */
-    fun deleteProcess(pid: String) {
-        TODO("not implemented")
+    fun deleteProcess(process: Process) {
+        nodeManager.platform.delete(process.context.pathRegistry())
     }
 
     fun startBrokering() {
+        nodeManager.platform.subscribe("/proc/${nodeManager.host}/register", ProcessInfo::class.java) {
+            
+        }
+
         job = GlobalScope.launch {
             try {
                 isStarted = true
                 while (isStarted) {
-                    log("started brokering loop")
+                    logger.info("started brokering loop")
                     while (!busChannel.isClosedForReceive) {
                         //log("brokering inner loop iteration")
                         val event = busChannel.receive()
-                        log("received event: ${event}")
+                        logger.debug("received event: ${event}")
 
                         slots.forEach {
                             it.value.forEach { slot ->
                                 if ( slot.match(event) ) {
                                     val cmd = CmdEvent(event)
-                                    val gan = gans[it.key]!!
+                                    val gan = processes[it.key]!!
                                     if(gan.isRunning())
                                         gan.send(cmd)
                                 }
@@ -114,17 +103,21 @@ class ProcessManager (
     }
 
 
-    inner class ProcessContext(val pid: String, val ganDef: GANDef): GANContext {
+    inner class ProcessContext(val pid: String, val processDef: ProcessDef):
+        io.losos.process.engine.ProcessContext {
         //TODO: Def validation
         //TODO: Process creation failure processing
 
-        override fun definition(): GANDef = ganDef
+        override fun definition(): ProcessDef = processDef
 
-        override fun contextPath(): String = "$PATH_PROC_STATE/${ganDef.name}/$pid"
+        override fun pathState(): String = "/proc/${nodeManager.host}/state/$pid"
+        override fun pathRegistry(): String = "/proc/${nodeManager.host}/registry/$pid"
+//        override fun pathLease(): String = "/proc/$host/lease/$pid"
 
-        override fun eventBus(): EventBus = eventBus
+        override fun nodeManager(): NodeManager = nodeManager
 
-        override fun action(id: String): Action<*> = action(ganDef.getActionDef(id)!!)
+
+        override fun action(id: String): Action<*> = action(processDef.getActionDef(id)!!)
 
         override fun action(def: ActionDef): Action<*> = when(def) {
             is TestActionDef -> TestAction(def, this)
@@ -133,14 +126,14 @@ class ProcessManager (
         }
 
         override fun guard(id: String, block: Guard.() -> Unit): Guard
-                = guard(ganDef.getGuardDef(id)!!, block)
+                = guard(processDef.getGuardDef(id)!!, block)
 
 
         override fun guard(def: GuardDef, block: Guard.() -> Unit): Guard {
             val action = if(def.action == null) null
-                         else action(ganDef.getActionDef(def.action)!!)
+                         else action(processDef.getActionDef(def.action)!!)
             val timeoutAction = if(def.timeoutAction == null) null
-                                else action(ganDef.getActionDef(def.timeoutAction)!!)
+                                else action(processDef.getActionDef(def.timeoutAction)!!)
 
             val g = Guard(
                 def = def,
@@ -158,7 +151,7 @@ class ProcessManager (
 
         override fun filterXorGuards(guardId: String, guards: List<Guard>): List<Guard> {
             //TODO: optimize
-            val relatedGuardIds: List<String> = ganDef.guardRelations
+            val relatedGuardIds: List<String> = processDef.guardRelations
                     .filter { it.type == GuardRelationType.XOR }
                     .filter { it.guards.contains(guardId) }
                     .map { it.guards }

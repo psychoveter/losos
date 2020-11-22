@@ -9,7 +9,6 @@ import kotlin.reflect.KClass
 typealias DefID = String
 typealias PID = String
 typealias EventType = String
-typealias JsonObj = ObjectNode
 
 val started = System.currentTimeMillis()
 
@@ -39,12 +38,10 @@ object Framework {
         return mapper
     }
 
-    fun <T> json2object(json: JsonObj, clazz: Class<T>): T = Framework
-                                                                .jsonMapper
+    fun <T> json2object(json: ObjectNode, clazz: Class<T>): T = jsonMapper
                                                                 .readValue(TreeTraversingParser(json), clazz)
 
-    fun object2json(obj: Any): JsonObj = Framework
-                                            .jsonMapper
+    fun object2json(obj: Any): ObjectNode = jsonMapper
                                             .convertValue(obj, ObjectNode::class.java)
 
     inline fun <reified T> readJson(path: String): T {

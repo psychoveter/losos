@@ -1,0 +1,63 @@
+{
+  "name": "xyz",
+  "description": "Simple linear sequence of actions with two controller actions and one remote",
+  "startGuard": "guard_start",
+  "finishGuard": "guard_exit",
+  "publishGuardEvents": true,
+
+  "guards": [
+    {
+      "id": "guard_start",
+      "type": "AND",
+      "slots": {
+        "start": {
+          "name": "start",
+          "type": "event_custom",
+          "selector": {
+            "type": "prefix",
+            "prefix": "start"
+          }
+        }
+      },
+      "action": "action_call"
+    },
+    {
+      "id": "guard_done",
+      "type": "AND",
+      "slots": {
+        "start": {
+          "name": "start",
+          "type": "event_custom",
+          "selector": {
+            "type": "prefix",
+            "prefix": "start"
+          }
+        }
+      },
+      "action": "action_done"
+    },
+    {
+      "id": "guard_exit",
+      "type": "AND",
+      "slots": {},
+      "action": null
+    }
+  ],
+
+  "guardRelations": [],
+
+  "actions": [
+    {
+      "id": "action_call",
+      "type": "test",
+      "delay": 100,
+      "runGuards": ["guard_done", "guard_fail"]
+    },
+    {
+      "id": "action_done",
+      "type": "test",
+      "message": "I'M DONE!! Now lets do kafka notification",
+      "runGuards": ["guard_exit"]
+    }
+  ]
+}

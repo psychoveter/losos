@@ -2,18 +2,19 @@ package io.losos.process.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import io.losos.process.engine.*
+import io.losos.process.model.ActionDef
 import kotlinx.coroutines.delay
 
 
 //==entities============================================================================================================
 
-class TestAction(def: TestActionDef, ctx: GANContext): AbstractAction<TestActionDef>(def, ctx) {
+class TestAction(def: TestActionDef, ctx: ProcessContext): AbstractAction<TestActionDef>(def, ctx) {
     override suspend fun action(input: ActionInput) {
-        log("Action ${def.id} is executing")
+        logInfo("Action ${def.id} is executing")
         if(def.message != null)
-            log(def.message)
+            logInfo(def.message)
 
-        input.slots.forEach{ log("Slot received: ${it.toString()}" ) }
+        input.slots.forEach{ logInfo("Slot received: ${it.toString()}" ) }
         delay(def.delay)
         def.runGuards.forEach {
             guard(it) {addEventSlots()}

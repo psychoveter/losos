@@ -2,10 +2,10 @@
  Event path               |  \Event payload
 ------------------------------------------------------------------------------------------------------------------------
 /idseq                    | ???
-  /<pool>                 | {pool_id, last_id}
+  /<pool>                 | { pool_id, last_id }
 ------------------------------------------------------------------------------------------------------------------------
 /node                     |
-  /<name>                 | {name: "string", service_registry }
+  /<name>                 | { name: "string", service_registry }
 ------------------------------------------------------------------------------------------------------------------------
 /proc                     |
    /<node>                |
@@ -17,18 +17,32 @@
          /<pid>           |
             /guard        |
                /<gid>     |
-                  /<cnt>  |  {guard_id, counter, state, slots}
+                  /<cnt>  |  { guard_id, counter, state, slots }
             /action       |
-               /<aid>     |  { id: "string", type: "string" } <- subprocess call, service call
+               /<aid>     |  { id: "string", type: "string", "params": {} }
+                 /state   |  type specific object {}
+                          |  subproc: { pid: "string" }
+                          |  service: { serviceId: "string", progress: {} }
 ------------------------------------------------------------------------------------------------------------------------
-/agent/                   |
+/invoke                   |
+   /async                 |
+     /<node>              |
+       <iid>              |  { iid: "string", clazz: "invocation class", params: {arbitrary object} }
+   /service               |
+                          |  тут какой-то планировщик должен быть...
+                          |
+   /subprocess            |
+     /<spid>              |  { spid: "string", "node": <executor_node_id>, "pid": "string" }
+                          |
+------------------------------------------------------------------------------------------------------------------------
+/agent                    |
    /registry              |
-      /<agent_id>         |  {agent_id, descriptor}
+      /<agent_id>         |  { agent_id, descriptor }
    /lease                 |  {}
       /<agent_id>         |
    /task                  |
       /<agent_id>         |
-           /<task_id>     |  {task_id, payload}
+           /<task_id>     |  { task_id, payload }
 ------------------------------------------------------------------------------------------------------------------------
 /event                    |
    /<event_type>          |

@@ -1,6 +1,7 @@
 package io.losos.common
 
-import io.losos.JsonObj
+import com.fasterxml.jackson.databind.node.ObjectNode
+
 
 data class AgentTask (
         val id: String,
@@ -8,5 +9,5 @@ data class AgentTask (
         val successEventPath: String,
         val retryEventPath: String,
         val failureEventPath: String,
-        val payload: JsonObj
+        val payload: ObjectNode
 )

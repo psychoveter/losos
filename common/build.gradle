@@ -6,4 +6,6 @@ plugins {
 dependencies {
     compile "org.slf4j:slf4j-api:1.7.29"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compile "com.github.pambrose.etcd-recipes:etcd-recipes:0.9.19"
+    compile "io.etcd:jetcd-all:0.4.1"
 }
