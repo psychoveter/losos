@@ -67,7 +67,7 @@ class ProcessManager (
 
     fun startBrokering() {
         nodeManager.platform.subscribe("/proc/${nodeManager.host}/register", ProcessInfo::class.java) {
-            val info = it.payload
+            val info = it.payload!!
             if (!processes.contains(info.pid)) {
                 logger.info("Found process ${info.pid} which is not created, creating...")
                 createProcess(info.def)

@@ -45,11 +45,14 @@ interface LososPlatform {
      */
     fun history(prefix: String): List<Event<*>>
 
-    fun subscribe(prefix: String, callback: suspend (e: Event<ObjectNode>) -> Unit): Subscription<ObjectNode>
+    fun subscribe(prefix: String, callback: suspend (e: Event<ObjectNode>) -> Unit) =
+        subscribe(prefix, com.fasterxml.jackson.databind.node.ObjectNode::class.java, callback)
 
     fun <T> subscribe(prefix: String, clazz: Class<T>, callback: suspend (e: Event<T>) -> Unit): Subscription<T>
 
-    fun subscribeDelete(path: String, callback: suspend (e: Event<ObjectNode>) -> Unit): Subscription<ObjectNode>
+    fun <T> subscribeDelete(path: String, clazz: Class<T>, callback: suspend (e: Event<T>) -> Unit): Subscription<T>
+    fun subscribeDelete(path: String, callback: suspend (e: Event<ObjectNode>) -> Unit) =
+        subscribeDelete(path, ObjectNode::class.java, callback)
 
     fun put(path: String, payload: Any)
 
@@ -83,7 +86,8 @@ interface LososPlatform {
     /**
      * Creates key which will be deleted when block finishes execution or crashes
      */
-    fun runInKeepAlive(key: String, block: () -> Unit)
+    fun runInKeepAlive(key: String, value: Any, block: () -> Unit)
+    fun runInKeepAlive(key: String, block: () -> Unit) = runInKeepAlive(key, emptyObject(), block)
 
     fun register(agentName: String, descriptor: AgentDescriptor)
 
@@ -102,7 +106,10 @@ interface LososPlatform {
 
     fun emptyObject() = jsonMapper.createObjectNode()
 
-    fun fromJson(json: ObjectNode): ByteSequence = ByteSequence.from(jsonMapper.writeValueAsBytes(json))
+    //TODO: remove, redundant
+    fun fromJson(json: ObjectNode): ByteSequence = fromObject(json)
+
+    fun fromObject(obj: Any): ByteSequence = ByteSequence.from(jsonMapper.writeValueAsBytes(obj))
 
     fun fromString(str: String): ByteSequence = ByteSequence.from(str, Charset.forName("UTF-8"))
 

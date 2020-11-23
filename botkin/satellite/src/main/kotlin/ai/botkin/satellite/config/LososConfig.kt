@@ -2,6 +2,7 @@ package ai.botkin.satellite.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.etcd.recipes.common.connectToEtcd
+import io.losos.KeyConvention
 import io.losos.platform.LososPlatform
 import io.losos.platform.etcd.EtcdLososPlatform
 import io.losos.process.engine.NodeManager
@@ -31,7 +32,7 @@ open class LososConfig {
     }
 
     @Bean
-    open fun library(): ProcessLibrary = EtcdProcessLibrary(platform(), "/node/$nodeName/library/")
+    open fun library(): ProcessLibrary = EtcdProcessLibrary(platform(), KeyConvention.keyNodeLibrary(nodeName))
 
     @Bean
     open fun nodeManager(): NodeManager {

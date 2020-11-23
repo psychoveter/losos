@@ -8,6 +8,7 @@ import io.losos.platform.LososPlatform
 import io.losos.platform.EventImpl
 import io.losos.platform.Subscription
 import io.etcd.jetcd.Client
+import io.etcd.jetcd.KeyValue
 import io.etcd.jetcd.Watch
 import io.etcd.jetcd.kv.GetResponse
 import io.etcd.jetcd.options.GetOption
@@ -50,10 +51,17 @@ class EtcdLososPlatform(
 
     private val subscriptions: MutableMap<String, EtcdSubscription<*>> = HashMap()
 
-    override fun subscribe(
-        prefix: String,
-        callback: suspend (e: Event<ObjectNode>) -> Unit
-    ): Subscription<ObjectNode> = subscribe(prefix, ObjectNode::class.java, callback)
+
+    private fun <T> kv2event(keyValue: KeyValue, clazz: Class<T>): Event<T> {
+        val key = bytes2string(keyValue.key)
+        val value = keyValue.value
+
+        return if (value == null)
+            EventImpl(key, null)
+        else
+            EventImpl(key, bytes2object(value, clazz))
+    }
+
 
     override fun <T> subscribe(
         prefix: String,
@@ -66,17 +74,7 @@ class EtcdLososPlatform(
             if (e.eventType == WatchEvent.EventType.PUT) {
                 GlobalScope.launch {
                     try {
-                        val key = bytes2string(e.keyValue.key)
-                        if (key.startsWith(LososPlatform.PREFIX_AGENT_LEASE)) {
-                            val value = jsonMapper
-                                .createObjectNode()
-                                .put("action", e.eventType.name)
-                            //TODO smells
-                            callback(EventImpl(key, value as T))
-                        } else {
-                            val value = jsonMapper.readValue(e.keyValue.value.bytes, clazz)
-                            callback(EventImpl(key, value))
-                        }
+                        callback(kv2event(e.keyValue, clazz))
                     } catch (exc: Exception) {
                         logger.error("Failed to parse event: e[${e.stringify()}]", e)
                     }
@@ -112,29 +110,29 @@ class EtcdLososPlatform(
         return subs
     }
 
-
-    override fun subscribeDelete(
+    override fun <T> subscribeDelete(
         path: String,
-        callback: suspend (e: Event<ObjectNode>) -> Unit
-    ): Subscription<ObjectNode> {
+        clazz: Class<T>,
+        callback: suspend (e: Event<T>) -> Unit
+    ): Subscription<T> {
+        val action: (e: WatchEvent) -> Unit = { e ->
+            logger.debug("[${Thread.currentThread().name}] received event: ${e.stringify()}")
+            when (e.eventType) {
+                WatchEvent.EventType.DELETE -> GlobalScope.launch {
+                    try {
+                         callback(kv2event(e.keyValue, clazz))
+                    } catch (exc: Exception) {
+                        logger.error("Failed to parse event: e[${e.stringify()}]", exc)
+                    }
+                }
+                else -> {}
+            }
+        }
+
         val watcher = client.watcher(
             keyName = path,
             block = { response ->
-                response.events.forEach { e ->
-                    logger.debug("[${Thread.currentThread().name}] received event: ${e.stringify()}")
-                    when (e.eventType) {
-                        WatchEvent.EventType.DELETE -> GlobalScope.launch {
-                            try {
-                                val key = bytes2string(e.keyValue.key)
-                                callback(EventImpl(key, emptyObject()))
-                            } catch (exc: Exception) {
-                                logger.error("Failed to parse event: e[${e.stringify()}]", exc)
-                            }
-                        }
-                        else -> {
-                        }
-                    }
-                }
+                response.events.forEach { action }
             }
         )
         val subs = EtcdSubscription(
@@ -142,7 +140,7 @@ class EtcdLososPlatform(
             path,
             callback,
             watcher,
-            ObjectNode::class.java
+            clazz
         )
         subscriptions[subs.id] = subs
 
@@ -206,8 +204,9 @@ class EtcdLososPlatform(
             .toMap()
     }
 
-    override fun runInKeepAlive(key: String, block: () -> Unit) {
-        client.putValueWithKeepAlive(key, 0, 5, block)
+    override fun runInKeepAlive(key: String, value: Any, block: () -> Unit) {
+        val bytes = fromObject(value)
+        client.putValueWithKeepAlive(key, bytes, 5, block)
     }
 
     override fun register(agentName: String, descriptor: AgentDescriptor) {

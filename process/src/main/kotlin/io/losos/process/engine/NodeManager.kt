@@ -6,6 +6,7 @@ import io.losos.process.engine.action.AsyncActionManager
 import io.losos.process.engine.action.ServiceActionManager
 import io.losos.process.library.ProcessLibrary
 import io.losos.process.model.ProcessDef
+import io.losos.process.planner.SubprocessPlanner
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -40,12 +41,13 @@ class NodeManager(
     val processManager = ProcessManager(this)
     val asyncActionManager = AsyncActionManager(this)
     val serviceActionManager = ServiceActionManager(this)
+    val subprocessPlanner = SubprocessPlanner(platform)
     val processDefCache: Map<String, ProcessDef> = processLibrary.getAvailableProcesses()
 
 
     private var isRunning = true
     private val leaseThread = Thread {
-        platform.runInKeepAlive(KeyConvention.keyNodeLease(name)) {
+        platform.runInKeepAlive(KeyConvention.keyNodeLease(name), info()) {
             while(isRunning) {
                 try { Thread.sleep(1000) } catch (e: InterruptedException) {}
             }

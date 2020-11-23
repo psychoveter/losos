@@ -48,7 +48,7 @@ class KotlinTaskExecutor(
         logger.info("subscribe for tasks at ${tasksPath}")
         jobsSubscription = platform.subscribe(tasksPath) {
             try {
-                val task = platform.json2object(it.payload, AgentTask::class.java)
+                val task = platform.json2object(it.payload!!, AgentTask::class.java)
                 send(task)
             } catch (e: Exception) {
                 logger.error("Failed to convert payload to agent task: ${it.payload.toString()}", e)
