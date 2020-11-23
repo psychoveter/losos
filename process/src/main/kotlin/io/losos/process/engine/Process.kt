@@ -59,7 +59,8 @@ data class ActionEvent(
 
 
 data class ProcessInfo(
-    val pid: String
+    val pid: String,
+    val def: ProcessDef
 )
 
 
@@ -97,6 +98,7 @@ class Process(
     override suspend fun beforeStart() {
         logger.info("Before start")
         //create timeout graph checker
+
         GlobalScope.launch {
             while(isRunning()) {
                 activeGuards
@@ -260,7 +262,7 @@ class Process(
         if(def.publishGuardEvents) {
             val evt = ActionEvent(
                     action.path(),
-                    Event.emptyPayload(),
+                    context.nodeManager().platform.emptyObject(),
                     action,
                     firedGuard
             )
@@ -270,6 +272,6 @@ class Process(
 
 
     fun info(): ProcessInfo {
-        return ProcessInfo(pid)
+        return ProcessInfo(pid, def)
     }
 }

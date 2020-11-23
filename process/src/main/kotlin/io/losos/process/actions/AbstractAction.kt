@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 
 abstract class AbstractAction<T: ActionDef>(
         override val def: T,
-        private val ctx: ProcessContext
+        val ctx: ProcessContext
 ): Action<T> {
 
     companion object {

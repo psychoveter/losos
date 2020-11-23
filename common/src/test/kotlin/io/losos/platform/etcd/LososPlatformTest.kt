@@ -1,9 +1,11 @@
 package io.losos.platform.etcd
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.losos.platform.Event
 import io.etcd.recipes.common.connectToEtcd
-import io.losos.Framework
+import io.losos.TestUtils
 import kotlinx.coroutines.*
 import org.junit.Test
 import java.lang.RuntimeException
@@ -11,11 +13,17 @@ import java.util.concurrent.CountDownLatch
 
 class LososPlatformTest {
 
+    companion object {
+        val jsonMapper = with(ObjectMapper()) {
+            registerModule(KotlinModule())
+        }
+    }
+
     @Test fun testSubs() {
         println("Test etcd subscription")
         val latch = CountDownLatch(2)
-        connectToEtcd(Framework.Test.ETCD_URLS) { client ->
-            val bus = EtcdLososPlatform(client)
+        connectToEtcd(TestUtils.Test.ETCD_URLS) { client ->
+            val bus = EtcdLososPlatform(client, jsonMapper)
             val callback: suspend (e: Event<ObjectNode>) -> Unit = { event: Event<ObjectNode> ->
                 val text = "[${Thread.currentThread().name}] Received event: ${event.fullPath}: ${event.payload.toString()}"
                 println(text)
@@ -28,16 +36,16 @@ class LososPlatformTest {
             println("send")
 
             bus.put(path = "/proc/p2",
-                    payload = Framework.jsonMapper
+                    payload = TestUtils.jsonMapper
                             .createObjectNode()
                             .put("key", "should not receive"))
             
             bus.put(path = "/proc/p1",
-                    payload = Framework.jsonMapper
+                    payload = TestUtils.jsonMapper
                             .createObjectNode()
                             .put("key", "value"))
             bus.put(path = "/proc/p1/a",
-                     payload = Framework.jsonMapper
+                     payload = TestUtils.jsonMapper
                             .createObjectNode()
                                 .put("key1", "value2"))
 
@@ -64,7 +72,7 @@ class LososPlatformTest {
 
     fun testKeepAliveWithAction(action: () -> Unit) {
 
-        connectToEtcd(Framework.Test.ETCD_URLS) { client ->
+        connectToEtcd(TestUtils.Test.ETCD_URLS) { client ->
             val latch = CountDownLatch(1)
             val callback: suspend (e: Event<ObjectNode>) -> Unit = { event: Event<ObjectNode> ->
                 val text = "Received event: ${event.fullPath}: ${event.payload}"
@@ -75,7 +83,7 @@ class LososPlatformTest {
             runBlocking {
                 val kaKey = "/watch/p1"
                 println("[${Thread.currentThread().name}] Create event bus")
-                val bus = EtcdLososPlatform(client)
+                val bus = EtcdLososPlatform(client, jsonMapper)
 
                 println("[${Thread.currentThread().name}] Subscribe to KA")
                 val subs = bus.subscribeDelete(kaKey, callback)

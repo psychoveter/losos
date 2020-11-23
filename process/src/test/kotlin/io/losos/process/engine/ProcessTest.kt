@@ -4,9 +4,11 @@ import io.losos.platform.etcd.EtcdLososPlatform
 import io.losos.platform.Event
 import io.losos.process.model.ProcessDef
 import io.etcd.recipes.common.connectToEtcd
-import io.losos.Framework
+import io.losos.TestUtils
+import io.losos.process.library.EtcdProcessLibrary
 import io.losos.process.model.GuardState
 import org.junit.Test
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.lang.RuntimeException
 import java.util.concurrent.CountDownLatch
@@ -17,20 +19,14 @@ class ProcessTest {
 
     //Open questions:
     // Waiting room for events: if guard was not raised before event has been received
+    val logger = LoggerFactory.getLogger(ProcessTest::class.java)
 
     @Test fun simpleLineTest() {
-        Framework.init(mapOf(
-                "process" to true,
-                "etcdbus" to false,
-                "pm" to true,
-                "simpleLineTest" to false
-        ))
 
-        val log = io.losos.logger("simpleLineTest")
-        val mapper = io.losos.Framework.jsonMapper
+        val mapper = io.losos.TestUtils.jsonMapper
         val ganDef = mapper.readValue(File("src/test/resources/cases/graphLine.json"), ProcessDef::class.java)
 
-        log("Read process definition: ${mapper.writeValueAsString(ganDef)}")
+        logger.info("Read process definition: ${mapper.writeValueAsString(ganDef)}")
 
         val latch = CountDownLatch(1)
         val guardSet = mutableSetOf(
@@ -43,9 +39,10 @@ class ProcessTest {
                 "/start"
         )
 
-        connectToEtcd(Framework.Test.ETCD_URLS) { client ->
-            val eBus = EtcdLososPlatform(client)
-            val nodeManager = NodeManager(eBus, "localhost")
+        connectToEtcd(TestUtils.Test.ETCD_URLS) { client ->
+            val eBus = EtcdLososPlatform(client, TestUtils.jsonMapper)
+            val library = EtcdProcessLibrary(eBus, "/node/library/testnode")
+            val nodeManager = NodeManager(eBus, library, name = "testnode")
             val pm = nodeManager.processManager
 
             pm.startBrokering()
@@ -53,9 +50,9 @@ class ProcessTest {
             val gan = pm.createProcess(ganDef)
 
             eBus.subscribe(gan.context.pathState()) {
-                log("47 TEST LISTEN: $it")
+                logger.info("47 TEST LISTEN: $it")
                 val relativePath = it.fullPath.removePrefix(gan.context.pathState())
-                log("49 relativePath: $relativePath, fullPath: ${it.fullPath}")
+                logger.info("49 relativePath: $relativePath, fullPath: ${it.fullPath}")
                 if(relativePath.startsWith("/guard")) {
                     val state = GuardState.valueOf(it.payload["state"]!!.textValue())
                     if(state == GuardState.OPENED)
@@ -70,9 +67,9 @@ class ProcessTest {
 
             gan.run()
 
-            eBus.put("${gan.context.pathState()}/start", Event.emptyPayload())
+            eBus.put("${gan.context.pathState()}/start", TestUtils.jsonMapper.createObjectNode())
             Thread.sleep(200)
-            eBus.put("${gan.context.pathState()}/go3", Event.emptyPayload())
+            eBus.put("${gan.context.pathState()}/go3", TestUtils.jsonMapper.createObjectNode())
 
             latch.await(10, TimeUnit.SECONDS)
 

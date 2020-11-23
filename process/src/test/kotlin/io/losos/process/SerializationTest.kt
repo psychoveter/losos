@@ -1,6 +1,6 @@
 package io.losos.process
 
-import io.losos.Framework
+import io.losos.TestUtils
 import io.losos.process.actions.TestActionDef
 import io.losos.process.engine.EventOnGuardSlotDef
 import io.losos.process.model.*
@@ -29,12 +29,12 @@ class SerializationTest {
                 actions = listOf(action1)
         )
 
-        val string = Framework.jsonMapper.writeValueAsString(gan)
+        val string = TestUtils.jsonMapper.writeValueAsString(gan)
         println(string)
 
-        val gg = Framework.jsonMapper.readValue(string, ProcessDef::class.java)
+        val gg = TestUtils.jsonMapper.readValue(string, ProcessDef::class.java)
 
-        val string2 = Framework.jsonMapper.writeValueAsString(gg)
+        val string2 = TestUtils.jsonMapper.writeValueAsString(gg)
 
         Assert.assertEquals(string, string2)
     }

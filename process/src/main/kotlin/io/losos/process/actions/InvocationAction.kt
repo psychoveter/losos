@@ -40,7 +40,7 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext): Abs
         val uid = UUID.randomUUID().toString()
         val type = def.type
         val params = def.config
-        params.set<ObjectNode>("data", input.jsonData())
+        params.set<ObjectNode>("data", input.jsonData(ctx.nodeManager().platform))
 
 
         when (type) {

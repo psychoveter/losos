@@ -1,5 +1,5 @@
 {
-  "name": "xyz",
+  "name": "dzm-root-process",
   "description": "Simple linear sequence of actions with two controller actions and one remote",
   "startGuard": "guard_start",
   "finishGuard": "guard_exit",
@@ -51,7 +51,7 @@
       "id": "action_call",
       "type": "test",
       "delay": 100,
-      "runGuards": ["guard_done", "guard_fail"]
+      "runGuards": ["guard_done"]
     },
     {
       "id": "action_done",

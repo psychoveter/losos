@@ -2,7 +2,7 @@ package io.losos.process.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.Framework
+import io.losos.TestUtils
 import io.losos.platform.Event
 import io.losos.platform.LososPlatform
 import io.losos.common.AgentTask
@@ -25,7 +25,8 @@ class AgentTaskAction(
 
     override suspend fun action(input: ActionInput) {
         logInfo("start agent task action")
-        val taskCtx: AgentTaskCtx = with(input[SLOT_CTX]){ this?.data as? AgentTaskCtx} ?: AgentTaskCtx(0, null)
+        val taskCtx: AgentTaskCtx = with(input[SLOT_CTX]){ this?.data as? AgentTaskCtx}
+                                    ?: AgentTaskCtx(0, null, ctx.nodeManager().platform.emptyObject())
         val exception: Event<ObjectNode>? = with(input[SLOT_EXCEPTION]){ this?.data }
         val inputSlots: Map<String, Slot> = input.slots.filterKeys { it != SLOT_CTX.name && it != SLOT_EXCEPTION.name }
 
@@ -99,7 +100,7 @@ class AgentTaskAction(
         failureEventPath: String
     ) {
         val id = UUID.randomUUID().toString()
-        val payload: ObjectNode = Framework.jsonMapper.createObjectNode()
+        val payload: ObjectNode = TestUtils.jsonMapper.createObjectNode()
         logInfo("Place task $id at agent $agentId")
 
         input.values.filterIsInstance<EventOnGuardSlot>()
@@ -116,14 +117,17 @@ class AgentTaskAction(
         )
 
         processCtx.nodeManager().platform
-            .put(LososPlatform.agentTaskPath(agentId, task.id), Framework.object2json(task))
+            .put(
+                LososPlatform.agentTaskPath(agentId, task.id),
+                processCtx.nodeManager().platform.object2json(task)
+            )
     }
 }
 
 data class AgentTaskCtx(
     val attempt: Long = 0,
     val previousAgent: String? = null,
-    val payload: ObjectNode = Event.emptyPayload()
+    val payload: ObjectNode
 ) {
     fun addAttempt() = AgentTaskCtx(attempt + 1, previousAgent, payload)
     fun addAttemptOnNewAgent(agentId: String) = AgentTaskCtx(attempt + 1, agentId, payload)

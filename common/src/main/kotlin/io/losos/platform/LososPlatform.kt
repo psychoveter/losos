@@ -1,11 +1,11 @@
 package io.losos.platform
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.node.TreeTraversingParser
 import io.etcd.jetcd.ByteSequence
-import io.losos.Framework
 import java.nio.charset.Charset
 import io.losos.common.AgentDescriptor
-
 
 interface Subscription<T> {
     val id: String
@@ -35,14 +35,6 @@ interface LososPlatform {
 
         //--serialization-utils-----------------------------------------------------------------------------------------
 
-        fun fromJson(json: ObjectNode): ByteSequence = ByteSequence.from(Framework.jsonMapper.writeValueAsBytes(json))
-
-        fun fromString(str: String): ByteSequence = ByteSequence.from(str, Charset.forName("UTF-8"))
-
-        fun bytes2json(bytes: ByteSequence): ObjectNode  = Framework.jsonMapper.readValue(bytes.bytes, ObjectNode::class.java)
-
-        fun bytes2string(bytes: ByteSequence): String = bytes.toString(Charset.forName("UTF-8"))
-
 
     }
 
@@ -59,21 +51,27 @@ interface LososPlatform {
 
     fun subscribeDelete(path: String, callback: suspend (e: Event<ObjectNode>) -> Unit): Subscription<ObjectNode>
 
-    fun put(path: String, payload: ObjectNode)
+    fun put(path: String, payload: Any)
 
     fun put(e: Event<*>)
 
     fun delete(path: String)
 
+
+
     /**
      * Read value for the specified key
      */
-    suspend fun readOne(path: String): ObjectNode?
+    fun <T> getOne(path: String, clazz: Class<T>): T?
+    fun getOne(path: String) = getOne(path, ObjectNode::class.java)
 
     /**
      * Read all keys and corresponding values matching this prefix
      */
-    suspend fun readPrefix(prefix: String): Map<String, ObjectNode>
+    fun <T> getPrefix(prefix: String, clazz: Class<T>): Map<String, T>
+    fun getPrefix(prefix: String) = getPrefix(prefix, ObjectNode::class.java)
+
+
 
     //--process-methods-------------------------------------------------------------------------------------------------
 
@@ -92,5 +90,27 @@ interface LososPlatform {
     fun deregister(agentName: String)
 
     fun invoke(actionId: String, actionType: String, params: ObjectNode?)
+
+
+    //--json-methods----------------------------------------------------------------------------------------------------
+
+    val jsonMapper: ObjectMapper
+
+    fun <T> json2object(json: ObjectNode, clazz: Class<T>): T = jsonMapper.readValue(TreeTraversingParser(json), clazz)
+
+    fun object2json(obj: Any): ObjectNode = jsonMapper.convertValue(obj, ObjectNode::class.java)
+
+    fun emptyObject() = jsonMapper.createObjectNode()
+
+    fun fromJson(json: ObjectNode): ByteSequence = ByteSequence.from(jsonMapper.writeValueAsBytes(json))
+
+    fun fromString(str: String): ByteSequence = ByteSequence.from(str, Charset.forName("UTF-8"))
+
+    fun bytes2json(bytes: ByteSequence): ObjectNode  = bytes2object(bytes, ObjectNode::class.java)
+
+    fun <T> bytes2object(bytes: ByteSequence, clazz: Class<T>) = jsonMapper.readValue(bytes.bytes, clazz)
+
+    fun bytes2string(bytes: ByteSequence): String = bytes.toString(Charset.forName("UTF-8"))
+
 
 }

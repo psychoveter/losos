@@ -1,24 +1,23 @@
 package io.losos.executor
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.Framework
+import io.losos.TestUtils
 import io.losos.actor.Actor
 import io.losos.platform.LososPlatform
 import io.losos.platform.Subscription
 import io.losos.common.AgentDescriptor
 import io.losos.common.AgentTask
+import org.slf4j.LoggerFactory
 import java.lang.Exception
 
 class KotlinTaskExecutor(
     val agentName: String,
-    val eventBus: LososPlatform,
+    val platform: LososPlatform,
     val descriptor: AgentDescriptor,
     val block: (input: AgentTask) -> ObjectNode
 ): Actor<AgentTask>() {
 
-    private fun log(msg: String) {
-        io.losos.log("[executor ${agentName}]: $msg")
-    }
+    private val logger = LoggerFactory.getLogger(KotlinTaskExecutor::class.java)
 
     companion object {
 
@@ -46,23 +45,23 @@ class KotlinTaskExecutor(
     override suspend fun beforeStart() {
 
         //subscribe for tasks
-        log("subscribe for tasks at ${tasksPath}")
-        jobsSubscription = eventBus.subscribe(tasksPath) {
+        logger.info("subscribe for tasks at ${tasksPath}")
+        jobsSubscription = platform.subscribe(tasksPath) {
             try {
-                val task = Framework.json2object(it.payload, AgentTask::class.java)
+                val task = platform.json2object(it.payload, AgentTask::class.java)
                 send(task)
             } catch (e: Exception) {
-                log("Failed to convert payload to agent task: ${it.payload.toString()}")
+                logger.error("Failed to convert payload to agent task: ${it.payload.toString()}", e)
                 e.printStackTrace()
             }
         }
 
         //register as agent
-        eventBus.register(agentName, descriptor)
+        platform.register(agentName, descriptor)
     }
 
     override suspend fun afterStop() {
-        log("after stop")
+        logger.info("after stop")
     }
 
     /**
@@ -80,7 +79,7 @@ class KotlinTaskExecutor(
      */
     override suspend fun process(message: AgentTask) {
         try {
-            log("received task: ${message.toString()}")
+            logger.info("received task: ${message}")
             val result = block(message)
             success(message, result)
         } catch (e: Exception) {
@@ -89,26 +88,26 @@ class KotlinTaskExecutor(
     }
 
     private fun success(input: AgentTask, result: ObjectNode?) {
-        eventBus.put(
+        platform.put(
                 input.successEventPath,
-                result?:Framework.jsonMapper.createObjectNode()
+                result?:TestUtils.jsonMapper.createObjectNode()
         )
     }
 
 
     private fun retry(input: AgentTask, e: Throwable?) {
-        val payload = if( e == null ) Framework.jsonMapper.createObjectNode()
-        else Framework.jsonMapper.createObjectNode().put("reason", e.message)
-        eventBus.put(
+        val payload = if( e == null ) TestUtils.jsonMapper.createObjectNode()
+        else TestUtils.jsonMapper.createObjectNode().put("reason", e.message)
+        platform.put(
                 input.retryEventPath,
                 payload
         )
     }
 
     private fun failure(input: AgentTask, e: Throwable?) {
-        val payload = if( e == null ) Framework.jsonMapper.createObjectNode()
-                      else Framework.jsonMapper.createObjectNode().put("reason", e.message)
-        eventBus.put(
+        val payload = if( e == null ) TestUtils.jsonMapper.createObjectNode()
+                      else TestUtils.jsonMapper.createObjectNode().put("reason", e.message)
+        platform.put(
                 input.failureEventPath,
                 payload
         )

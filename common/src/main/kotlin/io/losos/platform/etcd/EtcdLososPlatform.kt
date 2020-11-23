@@ -1,6 +1,7 @@
 package io.losos.platform.etcd
 
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.platform.Event
 import io.losos.platform.LososPlatform
@@ -8,19 +9,19 @@ import io.losos.platform.EventImpl
 import io.losos.platform.Subscription
 import io.etcd.jetcd.Client
 import io.etcd.jetcd.Watch
+import io.etcd.jetcd.kv.GetResponse
 import io.etcd.jetcd.options.GetOption
 import io.etcd.jetcd.options.WatchOption
 import io.etcd.jetcd.watch.WatchEvent
 import io.etcd.recipes.common.putValue
 import io.etcd.recipes.common.putValueWithKeepAlive
 import io.etcd.recipes.common.watcher
-import io.losos.Framework
 import io.losos.common.AgentDescriptor
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
+import java.lang.IllegalStateException
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.collections.HashMap
@@ -31,7 +32,8 @@ fun WatchEvent.stringify() =
             "value: ${keyValue.value.toString(Charset.defaultCharset())}"
 
 class EtcdLososPlatform(
-    val client: Client
+    val client: Client,
+    override val jsonMapper: ObjectMapper
 ) : LososPlatform {
 
     private val logger = LoggerFactory.getLogger(this::class.java)
@@ -64,15 +66,15 @@ class EtcdLososPlatform(
             if (e.eventType == WatchEvent.EventType.PUT) {
                 GlobalScope.launch {
                     try {
-                        val key = LososPlatform.bytes2string(e.keyValue.key)
+                        val key = bytes2string(e.keyValue.key)
                         if (key.startsWith(LososPlatform.PREFIX_AGENT_LEASE)) {
-                            val value = Framework.jsonMapper
+                            val value = jsonMapper
                                 .createObjectNode()
                                 .put("action", e.eventType.name)
                             //TODO smells
                             callback(EventImpl(key, value as T))
                         } else {
-                            val value = Framework.jsonMapper().readValue(e.keyValue.value.bytes, clazz)
+                            val value = jsonMapper.readValue(e.keyValue.value.bytes, clazz)
                             callback(EventImpl(key, value))
                         }
                     } catch (exc: Exception) {
@@ -87,7 +89,7 @@ class EtcdLososPlatform(
             keyName = prefix,
             option = WatchOption
                 .newBuilder()
-                .withPrefix(LososPlatform.fromString(prefix))
+                .withPrefix(fromString(prefix))
                 .withNoDelete(true)
                 .build(),
             block = { response ->
@@ -123,8 +125,8 @@ class EtcdLososPlatform(
                     when (e.eventType) {
                         WatchEvent.EventType.DELETE -> GlobalScope.launch {
                             try {
-                                val key = LososPlatform.bytes2string(e.keyValue.key)
-                                callback(EventImpl(key, Event.emptyPayload()))
+                                val key = bytes2string(e.keyValue.key)
+                                callback(EventImpl(key, emptyObject()))
                             } catch (exc: Exception) {
                                 logger.error("Failed to parse event: e[${e.stringify()}]", exc)
                             }
@@ -147,9 +149,13 @@ class EtcdLososPlatform(
         return subs
     }
 
-    override fun put(path: String, payload: ObjectNode) {
+    override fun put(path: String, payload: Any) {
         logger.debug("Emit event ${path}:${payload}")
-        client.putValue(path, LososPlatform.fromJson(payload))
+        val bytes = when (payload) {
+            is ObjectNode -> fromJson(payload)
+            else -> fromJson(object2json(payload))
+        }
+        client.putValue(path, bytes)
     }
 
     override fun invoke(actionId: String, actionType: String, params: ObjectNode?) {
@@ -161,42 +167,42 @@ class EtcdLososPlatform(
     override fun put(e: Event<*>) {
         val pl: ObjectNode = when (e.payload) {
             is ObjectNode -> e.payload as ObjectNode
-            else -> Framework.object2json(e.payload!!)
+            else -> object2json(e.payload!!)
         }
         put(e.fullPath, pl)
     }
 
     override fun delete(path: String) {
-        client.kvClient.delete(LososPlatform.fromString(path)).get()
+        client.kvClient.delete(fromString(path)).get()
     }
 
-    override suspend fun readOne(path: String): ObjectNode? {
+    override fun <T> getOne(path: String, clazz: Class<T>): T? {
         val getResponse = client.kvClient
-            .get(LososPlatform.fromString(path), GetOption.DEFAULT)
-            .await()
+            .get(fromString(path), GetOption.DEFAULT)
+            .get()
 
         if (getResponse.count > 1L)
             throw RuntimeException("Expected only one result")
 
         return if (getResponse.count == 1L)
-            LososPlatform.bytes2json(getResponse.kvs.get(0).value)
+            bytes2object(getResponse.kvs.get(0).value, clazz)
         else
             null
     }
 
-    override suspend fun readPrefix(prefix: String): Map<String, ObjectNode> {
+    override fun <T> getPrefix(prefix: String, clazz: Class<T>): Map<String, T> {
         val getResponse = client.kvClient
             .get(
-                LososPlatform.fromString(prefix),
+                fromString(prefix),
                 GetOption
                     .newBuilder()
-                    .withPrefix(LososPlatform.fromString(prefix))
+                    .withPrefix(fromString(prefix))
                     .build()
             )
-            .await()
+            .get()
 
         return getResponse.kvs
-            .map { LososPlatform.bytes2string(it.key) to LososPlatform.bytes2json(it.value) }
+            .map { bytes2string(it.key) to bytes2object(it.value, clazz) }
             .toMap()
     }
 
@@ -207,11 +213,12 @@ class EtcdLososPlatform(
     override fun register(agentName: String, descriptor: AgentDescriptor) {
         val path = "${LososPlatform.PREFIX_AGENTS}/$agentName"
         logger.debug("Registering agent $agentName at path $path")
-        put(path, descriptor.toJson())
+        val json = object2json(descriptor)
+        put(path, json)
     }
 
     override fun deregister(agentName: String) {
-        client.kvClient.delete(LososPlatform.fromString("${LososPlatform.PREFIX_AGENTS}/agentName"))
+        client.kvClient.delete(fromString("${LososPlatform.PREFIX_AGENTS}/agentName"))
     }
 
 

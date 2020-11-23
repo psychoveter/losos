@@ -1,6 +1,5 @@
 package io.losos.actor
 
-import com.fasterxml.jackson.databind.node.ObjectNode
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -21,8 +20,14 @@ abstract class Actor<T> {
      * Messages are processed in actor-like manner.
      */
     fun run(): Job {
+        //we have to wait on caller thread before initiation is finished
+        val startupLatch = CountDownLatch(1)
+
         this.job = GlobalScope.launch {
             beforeStart()
+            startupLatch.countDown()
+
+            //run main event-processing loop
             try {
                 while (isRunning()) {
                     val message = mailbox.receive()
@@ -32,6 +37,8 @@ abstract class Actor<T> {
                 afterStop()
             }
         }
+
+        startupLatch.await()
         return job!!
     }
 

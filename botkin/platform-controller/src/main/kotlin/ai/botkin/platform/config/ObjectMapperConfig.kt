@@ -1,23 +1,22 @@
-package ai.botkin.integration.config
+package ai.botkin.platform.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 
-@Configuration
+@Configuration @Component
 open class ObjectMapperConfig {
 
     @Bean
     open fun objectMapper(): ObjectMapper {
         val mapper = jacksonObjectMapper()
-        mapper.registerModule(KotlinModule())
 
         val timeModule = JavaTimeModule()
         timeModule.addDeserializer(

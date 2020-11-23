@@ -2,12 +2,13 @@ package io.losos.process.engine
 
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.Framework
+import io.losos.TestUtils
 import io.losos.platform.Event
 import io.losos.process.actions.Action
 import io.losos.process.model.GuardDef
 import io.losos.process.model.GuardState
 import io.losos.process.model.GuardType
+import org.slf4j.LoggerFactory
 import java.lang.IllegalStateException
 import java.lang.RuntimeException
 
@@ -41,7 +42,7 @@ class Guard(
     val timeoutAction: Action<*>? = null,
     val incarnation: Int = 1
 ) {
-    val log = io.losos.logger("Guard(${def.id})")
+    private val logger = LoggerFactory.getLogger(Guard::class.java)
 
     val createdAt = System.currentTimeMillis()
     val deadLine = createdAt + timeout
@@ -147,7 +148,9 @@ class Guard(
 
     override fun toString() = "Guard[${def.id}, state: $state, to: $timeout, toact: ${timeoutAction?.def?.id}]"
 
-    fun stateJson(): ObjectNode = Framework.jsonMapper.createObjectNode()
-                                                    .put("state", state.name)
+    fun stateJson(): ObjectNode = context.nodeManager()
+                                        .platform.jsonMapper
+                                        .createObjectNode()
+                                            .put("state", state.name)
 
 }

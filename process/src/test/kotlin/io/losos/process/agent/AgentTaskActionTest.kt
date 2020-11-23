@@ -1,24 +1,26 @@
 package io.losos.process.agent
 
 import io.etcd.recipes.common.connectToEtcd
-import io.losos.Framework
+import io.losos.TestUtils
 import io.losos.common.StringADescriptor
 import io.losos.platform.etcd.EtcdLososPlatform
 import io.losos.platform.Event
 import io.losos.platform.LososPlatform
 import io.losos.executor.KotlinTaskExecutor
-import io.losos.process.engine.IDGenUUID
+import io.losos.process.engine.NodeManager
 import io.losos.process.engine.ProcessManager
+import io.losos.process.library.EtcdProcessLibrary
 import io.losos.process.model.ProcessDef
 import org.junit.Test
+import org.slf4j.LoggerFactory
 import java.io.File
 
 
 open class LososTest {
 
-    fun onEventBus(block: (LososPlatform) -> Unit) {
-        connectToEtcd(Framework.Test.ETCD_URLS) {client ->
-            val eventBus = EtcdLososPlatform(client)
+    fun onPlatform(block: (LososPlatform) -> Unit) {
+        connectToEtcd(TestUtils.Test.ETCD_URLS) { client ->
+            val eventBus = EtcdLososPlatform(client, TestUtils.jsonMapper)
             block(eventBus)
         }
     }
@@ -26,11 +28,13 @@ open class LososTest {
 
     fun withProcessManagerEtcdEB(block: LososTest.(LososPlatform, ProcessManager) -> Unit) {
 
-        onEventBus { bus ->
-            val pm = ProcessManager(bus, IDGenUUID)
-            pm.startBrokering()
+        onPlatform { bus ->
+            val library = EtcdProcessLibrary(bus, "/node/library/testnode")
+            val nodeManager = NodeManager(bus, library, name = "testnode")
+            nodeManager.start()
+            val pm = nodeManager.processManager
             this.block(bus, pm)
-            pm.stopBrokering()
+            nodeManager.stop()
         }
     }
 
@@ -38,16 +42,11 @@ open class LososTest {
 
 class AgentTaskActionTest: LososTest() {
 
-    @Test fun directScheduleSuccess() = withProcessManagerEtcdEB { eventBus, pm ->
-        Framework.init(mapOf(
-                "process" to true,
-                "etcdbus" to false,
-                "pm" to true,
-                "testDirectSchedule" to false
-        ))
+    private val logger = LoggerFactory.getLogger(AgentTaskActionTest::class.java)
 
-        val log = io.losos.logger("testDirectSchedule")
-        val ganDef = Framework
+    @Test fun directScheduleSuccess() = withProcessManagerEtcdEB { eventBus, pm ->
+
+        val ganDef = TestUtils
                 .jsonMapper
                 .readValue(File("src/test/resources/cases/graphAgentTaskAction.json"), ProcessDef::class.java)
 
@@ -56,9 +55,9 @@ class AgentTaskActionTest: LososTest() {
                     agentName = "agent1",
                     eventBus = eventBus,
                     descriptor = StringADescriptor("taskType")) { input ->
-                log("Processing task: ${input}")
+                logger.info("Processing task: ${input}")
                 Thread.sleep(1000)
-                Framework.jsonMapper
+                TestUtils.jsonMapper
                         .createObjectNode()
                         .put("response", "ok")
         }
@@ -67,16 +66,16 @@ class AgentTaskActionTest: LososTest() {
         val gan = pm.createProcess(ganDef)
 
         eventBus.subscribe(gan.context.pathState()) {
-                log(it.toString())
+                logger.info(it.toString())
         }
 
         gan.run()
 
         Thread.sleep(5)
-        eventBus.put("${gan.context.pathState()}/start", Event.emptyPayload())
+        eventBus.put("${gan.context.pathState()}/start", TestUtils.jsonMapper.createObjectNode())
 
         gan.joinThread(10000)
-        io.losos.log("done")
+        logger.info("done")
     }
 
     @Test fun testOneTimeoutDirectSchedule() {

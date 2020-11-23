@@ -35,8 +35,8 @@ class ProcessManager (
     /**
      * Create new process and subscribe it for it's related events
      */
-    fun createProcess(def: ProcessDef): Process {
-        val pid = nodeManager.idGen.newUniquePID()
+    fun createProcess(def: ProcessDef, initialPID: String? = null): Process {
+        val pid = initialPID ?: nodeManager.idGen.newUniquePID()
         slots[pid] = CopyOnWriteArrayList()
         subscriptions[pid] = CopyOnWriteArrayList()
         val context = ProcessContext(pid, def)
@@ -46,7 +46,7 @@ class ProcessManager (
             busChannel.send(it)
         })
 
-        nodeManager.platform.put(gan.context.pathRegistry(), Event.emptyPayload())
+        nodeManager.platform.put(gan.context.pathRegistry(), gan.info())
 
         return gan
     }
@@ -67,7 +67,11 @@ class ProcessManager (
 
     fun startBrokering() {
         nodeManager.platform.subscribe("/proc/${nodeManager.host}/register", ProcessInfo::class.java) {
-            
+            val info = it.payload
+            if (!processes.contains(info.pid)) {
+                logger.info("Found process ${info.pid} which is not created, creating...")
+                createProcess(info.def)
+            }
         }
 
         job = GlobalScope.launch {
@@ -76,7 +80,7 @@ class ProcessManager (
                 while (isStarted) {
                     logger.info("started brokering loop")
                     while (!busChannel.isClosedForReceive) {
-                        //log("brokering inner loop iteration")
+                        logger.debug("await for event...")
                         val event = busChannel.receive()
                         logger.debug("received event: ${event}")
 

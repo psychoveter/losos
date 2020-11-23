@@ -29,9 +29,9 @@ class EtcdAgentManagerV1(val eventBus: LososPlatform): AgentRegistry<StringADesc
 
     override suspend fun getAgents(): List<AgentDef<StringADescriptor>> {
         return eventBus
-                .readPrefix("${LososPlatform.PREFIX_AGENTS}/")
+                .getPrefix("${LososPlatform.PREFIX_AGENTS}/")
                 .entries
-                .map { AgentDef(it.key, StringADescriptor.fromJson(it.value)) }
+                .map { AgentDef(it.key, eventBus.json2object(it.value, StringADescriptor::class.java)) }
                 .toList()
     }
 
