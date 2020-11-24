@@ -45,7 +45,7 @@ class ProcessManager (
         slots[pid] = CopyOnWriteArrayList()
         subscriptions[pid] = CopyOnWriteArrayList()
         val context = ProcessContext(pid, def)
-        val process = Process(pid, def, context)
+        val process = Process(pid, def, context, resultEventPath)
         processes[pid] = process
         subscriptions[pid]!!.add(nodeManager.platform.subscribe(context.pathState()) {
             busChannel.send(it)

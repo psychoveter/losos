@@ -96,7 +96,8 @@ data class CmdAction(val action: Action<*>, val firedGuard: Guard): CmdGAN
 class Process(
     val pid: String,
     val def: ProcessDef,
-    val context: ProcessContext
+    val context: ProcessContext,
+    val resultEventPath: String? = null
 ): Actor<CmdGAN>() {
 
     private val logger = LoggerFactory.getLogger(Process::class.java)
@@ -205,6 +206,16 @@ class Process(
                     close()
                 }
                 publishGuard(message.guard)
+                if (resultEventPath != null) {
+                    context.nodeManager().platform.put(
+                        resultEventPath,
+                        ProcessResult (
+                            ProcessExitCode.OK,
+                            message.guard.slotJson()
+                        )
+
+                    )
+                }
             }
             is CmdGuardTimeout -> {
                 logger.info("Guard timeout happens: ${message.guard.def.id}")
@@ -257,8 +268,7 @@ class Process(
             }
         }
 
-        //open related OR guards
-        //TODO
+        //TODO open related OR guards
     }
 
     private suspend fun handleGuardOpen(guard: Guard, action: Action<*>?) {

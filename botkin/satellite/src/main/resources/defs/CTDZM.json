@@ -17,38 +17,8 @@
       "action": "action_one"
     },
     {
-      "id": "guard_two",
-      "slots": {},
-      "action": "action_two"
-    },
-    {
-      "id": "guard_three",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
-      "action": "action_three"
-    },
-    {
-      "id": "guard_four",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
-      "action": "action_four"
-    },
-    {
       "id": "guard_exit",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
+      "slots": {},
       "action": null
     }
   ],
@@ -60,22 +30,6 @@
       "id": "action_one",
       "type": "test",
       "message": "I'M DOING THE JOB!!",
-      "runGuards": ["guard_two"]
-    },
-    {
-      "id": "action_two",
-      "type": "test",
-      "delay": 100,
-      "runGuards": ["guard_three"]
-    },
-    {
-      "id": "action_three",
-      "type": "test",
-      "runGuards": ["guard_four"]
-    },
-    {
-      "id": "action_four",
-      "type": "test",
       "runGuards": ["guard_exit"]
     }
   ]

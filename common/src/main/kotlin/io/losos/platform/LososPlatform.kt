@@ -102,7 +102,8 @@ interface LososPlatform {
 
     fun <T> json2object(json: ObjectNode, clazz: Class<T>): T = jsonMapper.readValue(TreeTraversingParser(json), clazz)
 
-    fun object2json(obj: Any): ObjectNode = jsonMapper.convertValue(obj, ObjectNode::class.java)
+    fun object2json(obj: Any?): ObjectNode = if (obj == null) jsonMapper.createObjectNode()
+                                                         else jsonMapper.convertValue(obj, ObjectNode::class.java)
 
     fun emptyObject() = jsonMapper.createObjectNode()
 

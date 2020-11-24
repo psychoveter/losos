@@ -166,5 +166,13 @@ class Guard(
                                         .platform.jsonMapper
                                         .createObjectNode()
                                             .put("state", state.name)
-
+    fun slotJson(): ObjectNode = context.nodeManager().platform.jsonMapper.createObjectNode().apply {
+        slots.values
+            .filterIsInstance<SlotWithValue<*>>()
+            .forEach {
+                val name = it.id
+                val value = context.nodeManager().platform.object2json(it.data)
+                this.put(name, value)
+            }
+    }
 }
