@@ -10,7 +10,7 @@ import kotlinx.coroutines.delay
 
 class TestAction(def: TestActionDef, ctx: ProcessContext): AbstractAction<TestActionDef>(def, ctx) {
     override suspend fun action(input: ActionInput) {
-        logInfo("Action ${def.id} is executing")
+        logInfo("Action ${def.id} is executing. Input: ${input.jsonData(context.nodeManager().platform)}")
         if(def.message != null)
             logInfo(def.message)
 

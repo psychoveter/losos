@@ -27,16 +27,6 @@
       "action": "action_success"
     },
     {
-      "id": "guard_done",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
-      "action": "action_done"
-    },
-    {
       "id": "guard_exit",
       "slots": {},
       "action": null

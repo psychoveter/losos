@@ -16,7 +16,7 @@ class SerializationTest {
         val slot3 = EventOnGuardSlotDef("s3")
         val slot4 = EventOnGuardSlotDef("s4")
 
-        val g = GuardDef("g1", mapOf(slot1.name to slot1, slot2.name to slot2), GuardType.AND, "action1")
+        val g = GuardDef("g1", mapOf(slot1.name to slot1, slot2.name to slot2), "action1", GuardType.AND)
         val action1 = TestActionDef("action1", listOf())
 
         val gan = ProcessDef(
