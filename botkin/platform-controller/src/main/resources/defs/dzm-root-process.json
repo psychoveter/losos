@@ -8,37 +8,36 @@
   "guards": [
     {
       "id": "guard_start",
-      "type": "AND",
       "slots": {
-        "start": {
-          "name": "start",
-          "type": "event_custom",
-          "selector": {
-            "type": "prefix",
-            "prefix": "start"
-          }
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
         }
       },
       "action": "action_call"
     },
     {
-      "id": "guard_done",
-      "type": "AND",
+      "id": "action_call/guard_result",
       "slots": {
-        "start": {
-          "name": "start",
-          "type": "event_custom",
-          "selector": {
-            "type": "prefix",
-            "prefix": "start"
-          }
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
+        }
+      },
+      "action": "action_success"
+    },
+    {
+      "id": "guard_done",
+      "slots": {
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
         }
       },
       "action": "action_done"
     },
     {
       "id": "guard_exit",
-      "type": "AND",
       "slots": {},
       "action": null
     }
@@ -49,14 +48,22 @@
   "actions": [
     {
       "id": "action_call",
-      "type": "test",
-      "delay": 100,
-      "runGuards": ["guard_done"]
+      "type": "invoke",
+      "invoke_type": "SUBPROCESS",
+      "config": {
+        "processName": "CTDZM"
+      }
     },
     {
-      "id": "action_done",
+      "id": "action_success",
       "type": "test",
       "message": "I'M DONE!! Now lets do kafka notification",
+      "runGuards": ["guard_exit"]
+    },
+    {
+      "id": "action_fail",
+      "type": "test",
+      "message": "FAAAAAAAIL",
       "runGuards": ["guard_exit"]
     }
   ]

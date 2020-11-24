@@ -19,7 +19,11 @@ data class SlotId<T: Slot>(val name: String, val clazz: KClass<T>) {
 /**
  * Stateful class which holds corresponding event
  */
-open class Slot(val id: String, val guard: Guard)
+open class Slot(val id: String, val guard: Guard) {
+    init {
+        guard.slots[id] = this
+    }
+}
 
 abstract class SlotWithValue<T>(id: String, guard: Guard): Slot(id, guard) {
     var data: T? = null
@@ -44,16 +48,22 @@ abstract class EventSlot(id: String, guard: Guard): SlotWithValue<Event<ObjectNo
 
     abstract fun match(e: Event<ObjectNode>): Boolean
     abstract fun eventPath(): String
+
+
 }
 
 class EventOnGuardSlot(id: String, guard: Guard): EventSlot(id, guard) {
     override fun match(e: Event<ObjectNode>): Boolean = e.fullPath == eventPath()
     override fun eventPath(): String = "${guard.path()}/$id"
+
+    override fun toString() = "EventOnGuard(path=${eventPath()})"
 }
 
-class EventCustomSlot(fullPath: String, guard: Guard, val selector: Selector): EventSlot(fullPath, guard) {
+class EventCustomSlot(val fullPath: String, guard: Guard, val selector: Selector): EventSlot(fullPath, guard) {
     override fun match(e: Event<ObjectNode>): Boolean = selector.check(e)
     override fun eventPath(): String = this.id
+
+    override fun toString() = "EventCustom(path=$fullPath)"
 }
 
 class VarSlot(id: String, guard: Guard, payload: Any? = null): SlotWithValue<Any>(id, guard) {
@@ -63,6 +73,8 @@ class VarSlot(id: String, guard: Guard, payload: Any? = null): SlotWithValue<Any
         this.data = pl
         return this
     }
+
+    override fun toString() = "VarSlot(id=$id)"
 }
 
 //==defenitions=========================================================================================================

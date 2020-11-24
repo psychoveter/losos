@@ -20,7 +20,10 @@ interface ProcessLibrary {
 class EtcdProcessLibrary(val platform: LososPlatform, val keyRoot: String): ProcessLibrary {
 
     override fun getAvailableProcesses(): Map<String, ProcessDef> {
-        return platform.getPrefix(keyRoot, ProcessDef::class.java)
+        return platform
+            .getPrefix(keyRoot, ProcessDef::class.java)
+            .map { it.value.name to it.value }
+            .toMap()
     }
 }
 

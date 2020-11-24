@@ -2,9 +2,7 @@ package ai.botkin.platform.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.platform.LososPlatform
 import io.losos.process.engine.NodeManager
-import io.losos.process.engine.ProcessManager
 import io.losos.process.model.ProcessDef
 import org.springframework.core.io.ResourceLoader
 import org.springframework.stereotype.Component
@@ -26,12 +24,7 @@ open class LososService(
     fun runProcess(args: ObjectNode): String {
         //hard code delegating root process
         val def = loadDefaultProcessDef()
-        val process = nodeManager.processManager.createProcess(def)
-        process.run()
-
-        //fire
-        nodeManager.platform.put("${process.startGuard.path()}/start", args)
-
+        val process = nodeManager.processManager.createProcess(def, args = args)
         return process.pid
     }
 

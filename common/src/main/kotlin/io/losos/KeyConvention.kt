@@ -65,10 +65,13 @@ object KeyConvention {
     val NODE_LIBRARY_ROOT = "/node/library"
     val NODE_LEASE_ROOT = "/node/lease"
 
+
     fun keyNodeRegistry(nodeName: String) = "$NODE_REGISTRY_ROOT/$nodeName"
     fun keyNodeLease(nodeName: String) = "$NODE_LEASE_ROOT/$nodeName"
     fun keyNodeLibrary(nodeName: String) = "$NODE_LIBRARY_ROOT/$nodeName"
     fun keyProcessLibrary(nodeName: String, procName: String) = "${keyNodeLibrary(nodeName)}/$procName"
-
+    fun keyProcessRegistry(nodeName: String) = "/proc/$nodeName/registry"
+    fun keyProcessEntry(node: String, pid: String) = "${keyProcessRegistry(node)}/$pid"
+    fun keyProcessState(node: String, pid: String) = "/proc/$node/state/$pid"
 
 }

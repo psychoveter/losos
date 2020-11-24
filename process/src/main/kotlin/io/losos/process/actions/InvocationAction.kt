@@ -1,9 +1,12 @@
 package io.losos.process.actions
 
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.process.engine.Guard
 import io.losos.process.engine.ProcessContext
 import io.losos.process.model.ActionDef
-import java.util.*
+import org.slf4j.LoggerFactory
+import java.lang.RuntimeException
 
 /**
  * Invocation action is intended to run some process of execution.
@@ -26,34 +29,36 @@ import java.util.*
  * @see io.losos.process.actions.SubProcessAction
  */
 class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext): AbstractAction<T>(def, ctx) {
+
+    private val logger = LoggerFactory.getLogger(InvocationAction::class.java)
+
     companion object {
-        const val GUARD_SUCCESS = "guard_success"
-        const val GUARD_FAILURE = "guard_failure"
+        const val GUARD_RESULT = "guard_result"
     }
 
     override suspend fun action(input: ActionInput) {
         //1. Rise guards
-        guard(def.guardSuccessName) { addEventSlots() }
-        guard(def.guardFailureName) { addEventSlots() }
+        val resultGuard = guard(def.guardResult) { addEventSlots() }
 
-        //2. place action object:
-        val uid = UUID.randomUUID().toString()
-        val type = def.type
-        val params = def.config
-        params.set<ObjectNode>("data", input.jsonData(ctx.nodeManager().platform))
-
-
-        when (type) {
+        when (def.invoke_type) {
             InvocationType.ASYNC -> {
-
+                throw RuntimeException("Not implemented")
             }
 
             InvocationType.SERVICE -> {
-
+                throw RuntimeException("Not implemented")
             }
 
             InvocationType.SUBPROCESS -> {
-
+                val config = ctx.nodeManager().platform.json2object(def.config, SubprocessActionConfig::class.java)
+                val result = ctx.nodeManager().subprocessPlanner.assignSubprocess(
+                    config.processName,
+                    resultGuard.eventGuardSlot()!!.eventPath(),
+                    config.args
+                )
+                if (result != null) {
+                    logger.info("Scheduled ${config.processName} at node ${result.node} with pid ${result.pid}")
+                }
             }
         }
 
@@ -64,14 +69,18 @@ enum class InvocationType {
     ASYNC, SUBPROCESS, SERVICE
 }
 
+@JsonTypeName("invoke")
 open class InvocationActionDef (
     override val id: String,
-    val type: InvocationType,
+    val invoke_type: InvocationType,
     val config: ObjectNode
 ): ActionDef(id, listOf(
-    "$id/${InvocationAction.GUARD_SUCCESS}",
-    "$id/${InvocationAction.GUARD_FAILURE}"
+    "$id/${InvocationAction.GUARD_RESULT}"
 )) {
-    val guardSuccessName = "$id/${InvocationAction.GUARD_SUCCESS}"
-    val guardFailureName = "$id/${InvocationAction.GUARD_FAILURE}"
+    val guardResult = "$id/${InvocationAction.GUARD_RESULT}"
 }
+
+data class SubprocessActionConfig(
+    val processName: String,
+    val args: ObjectNode?
+)

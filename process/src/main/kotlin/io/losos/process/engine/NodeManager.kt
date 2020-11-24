@@ -42,7 +42,6 @@ class NodeManager(
     val asyncActionManager = AsyncActionManager(this)
     val serviceActionManager = ServiceActionManager(this)
     val subprocessPlanner = SubprocessPlanner(platform)
-    val processDefCache: Map<String, ProcessDef> = processLibrary.getAvailableProcesses()
 
 
     private var isRunning = true
@@ -55,7 +54,7 @@ class NodeManager(
     }
 
     fun start() {
-        for(proc in processDefCache.values) {
+        for(proc in processLibrary.getAvailableProcesses().values) {
             logger.info("Found ${proc.name} in the library")
         }
 
@@ -71,5 +70,5 @@ class NodeManager(
         leaseThread.interrupt()
     }
 
-    fun info(): NodeInfo = NodeInfo(name, host, processDefCache.values.map { it.name })
+    fun info(): NodeInfo = NodeInfo(name, host, processLibrary.getAvailableProcesses().values.map { it.name })
 }

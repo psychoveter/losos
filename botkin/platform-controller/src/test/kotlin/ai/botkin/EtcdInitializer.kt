@@ -1,6 +1,7 @@
 package ai.botkin
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.etcd.jetcd.options.DeleteOption
 import io.etcd.recipes.common.connectToEtcd
 import io.losos.KeyConvention
 import io.losos.TestUtils
@@ -8,7 +9,7 @@ import io.losos.platform.etcd.EtcdLososPlatform
 import io.losos.process.model.ProcessDef
 import java.io.File
 
-class EtcdInitializer {
+class EtcdInitializer(val urls: List<String>){
 
     fun getPlatformProcesses(): List<ProcessDef> {
         val dir = File("/home/veter/braingarden/losos/botkin/platform-controller/src/main/resources/defs")
@@ -28,7 +29,22 @@ class EtcdInitializer {
             .toList()
     }
 
-    fun initialize(urls: List<String>) {
+    fun clean(): EtcdInitializer {
+        connectToEtcd(urls) { client ->
+            val platform = EtcdLososPlatform(client, TestUtils.jsonMapper)
+            client.kvClient.delete(
+                platform.fromString("/"),
+                DeleteOption
+                    .newBuilder()
+                    .withPrefix(platform.fromString("/"))
+                    .build())
+                .get()
+        }
+
+        return this
+    }
+
+    fun initialize(): EtcdInitializer {
         val platform1 = "platform-controller"
         val satellite1 = "satellite-1"
 
@@ -44,11 +60,13 @@ class EtcdInitializer {
                 platform.put(KeyConvention.keyProcessLibrary(satellite1, it.name), it)
             }
         }
-
+        return this
     }
 
 }
 
 fun main(args: Array<String>) {
-    EtcdInitializer().initialize(TestUtils.Test.ETCD_URLS)
+    EtcdInitializer(TestUtils.Test.ETCD_URLS)
+        .clean()
+        .initialize()
 }

@@ -8,50 +8,47 @@
   "guards": [
     {
       "id": "guard_one",
-      "type": "AND",
       "slots": {
-        "start": {
-          "name": "start",
-          "type": "event_custom",
-          "selector": {
-            "type": "prefix",
-            "prefix": "start"
-          }
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
         }
       },
       "action": "action_one"
     },
     {
       "id": "guard_two",
-      "type": "AND",
       "slots": {},
       "action": "action_two"
     },
     {
       "id": "guard_three",
-      "type": "AND",
       "slots": {
-        "go3": {
-          "name": "go3",
-          "type": "event_custom",
-          "selector": {
-            "type": "prefix",
-            "prefix": "go3"
-          }
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
         }
       },
       "action": "action_three"
     },
     {
       "id": "guard_four",
-      "type": "AND",
-      "slots": {},
+      "slots": {
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
+        }
+      },
       "action": "action_four"
     },
     {
       "id": "guard_exit",
-      "type": "AND",
-      "slots": {},
+      "slots": {
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
+        }
+      },
       "action": null
     }
   ],

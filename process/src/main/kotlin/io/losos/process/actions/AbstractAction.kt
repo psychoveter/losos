@@ -9,9 +9,8 @@ abstract class AbstractAction<T: ActionDef>(
         val ctx: ProcessContext
 ): Action<T> {
 
-    companion object {
-        val logger = LoggerFactory.getLogger(AbstractAction::class.java)
-    }
+    private val logger = LoggerFactory.getLogger(AbstractAction::class.java)
+
 
     protected val context = ctx
     private val cmds = ArrayList<CmdGAN>()
@@ -28,6 +27,7 @@ abstract class AbstractAction<T: ActionDef>(
 
     fun guard(guardId: String, block: Guard.() -> Unit = {}): Guard {
         val guard = ctx.guard(guardId, block)
+        logger.info("Created guard: $guard")
         cmds.add(CmdGuardRegister(guard))
         return guard
     }

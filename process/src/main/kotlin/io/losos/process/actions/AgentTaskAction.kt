@@ -53,9 +53,9 @@ class AgentTaskAction(
                                 this.context,
                                 self.def.schedulePolicy.agentId!!,
                                 inputSlots,
-                                gSuccess[SLOT_RESPONSE].eventPath(),
-                                gRetry[SLOT_EXCEPTION].eventPath(),
-                                gFailure[SLOT_EXCEPTION].eventPath()
+                                gSuccess[SLOT_RESPONSE]!!.eventPath(),
+                                gRetry[SLOT_EXCEPTION]!!.eventPath(),
+                                gFailure[SLOT_EXCEPTION]!!.eventPath()
                         )
                     }
                 }

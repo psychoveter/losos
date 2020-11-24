@@ -4,6 +4,7 @@ package io.losos.process.model
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.losos.process.actions.AgentTaskActionDef
+import io.losos.process.actions.InvocationActionDef
 import io.losos.process.actions.TestActionDef
 import io.losos.process.engine.EventCustomSlotDef
 import io.losos.process.engine.EventOnGuardSlotDef
@@ -41,7 +42,8 @@ data class ProcessDef(
 )
 @JsonSubTypes(
         JsonSubTypes.Type(value = TestActionDef::class, name = "test"),
-        JsonSubTypes.Type(value = AgentTaskActionDef::class, name = "agent_task")
+        JsonSubTypes.Type(value = AgentTaskActionDef::class, name = "agent_task"),
+        JsonSubTypes.Type(value = InvocationActionDef::class, name = "invoke")
 )
 open class ActionDef (
         open val id: String,
@@ -67,8 +69,8 @@ open class SlotDef(
 data class GuardDef(
         val id: String,
         val slots: Map<String, SlotDef>,
-        val type: GuardType,
         val action: String?,
+        val type: GuardType = GuardType.AND,
         val timeout: Long = -1,
         val timeoutAction: String? = null
 )

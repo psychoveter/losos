@@ -31,6 +31,9 @@ import java.lang.RuntimeException
  *    - if xor-related guard is opened, then the guard is cancelled
  *
  * Any logical control flow behaviour can be implemented with action-guard semantics.
+ *
+ *
+ *
  */
 class Guard(
     val def: GuardDef,
@@ -42,6 +45,11 @@ class Guard(
     val timeoutAction: Action<*>? = null,
     val incarnation: Int = 1
 ) {
+    companion object {
+        val SLOT_EVENT_GUARD = SlotId.eventOnGuardId("guard")
+    }
+
+
     private val logger = LoggerFactory.getLogger(Guard::class.java)
 
     val createdAt = System.currentTimeMillis()
@@ -99,9 +107,11 @@ class Guard(
     operator fun <T: Slot> get(id: String): T? = slots[id] as? T
 
     @Suppress("UNCHECKED_CAST")
-    operator fun <T: Slot> get(id: SlotId<T>): T = slots[id.name]!! as T
+    operator fun <T: Slot> get(id: SlotId<T>): T? = slots[id.name] as? T
 
     fun path(): String = "${context.pathState()}/guard/${def.id}/1"
+
+    fun eventGuardSlot() = get(SLOT_EVENT_GUARD)
 
     //--creation--------------------------------------------------------------------------------------------------------
 
@@ -146,7 +156,11 @@ class Guard(
 
     //--presentation----------------------------------------------------------------------------------------------------
 
-    override fun toString() = "Guard[${def.id}, state: $state, to: $timeout, toact: ${timeoutAction?.def?.id}]"
+    override fun toString() = "Guard[${def.id}, " +
+            "state: $state, " +
+            "to: $timeout, " +
+            "toact: ${timeoutAction?.def?.id}, " +
+            "slots: ${slots.values}]"
 
     fun stateJson(): ObjectNode = context.nodeManager()
                                         .platform.jsonMapper

@@ -57,6 +57,21 @@ data class ActionEvent(
     val firedGuard: Guard
 ): Event<ObjectNode>
 
+data class ProcessStartCall (
+    val pid: String,
+    val procName: String,
+    val resultEventPath: String?,
+    val args: ObjectNode?
+)
+
+data class ProcessResult(
+    val exitCode: ProcessExitCode,
+    val data: ObjectNode
+)
+
+enum class ProcessExitCode {
+    OK, FAILED
+}
 
 data class ProcessInfo(
     val pid: String,
@@ -65,7 +80,6 @@ data class ProcessInfo(
 
 
 interface CmdGAN
-
 data class CmdGuardRegister(val guard: Guard): CmdGAN
 data class CmdGuardOpen(val guard: Guard): CmdGAN
 data class CmdGuardTimeout(val guard: Guard): CmdGAN
@@ -120,6 +134,13 @@ class Process(
         //TODO: clean context, resources, subscriptions, etc
     }
 
+    //--Interface-------------------------------------------------------------------------------------------------------
+
+    fun info(): ProcessInfo {
+        return ProcessInfo(pid, def)
+    }
+
+    fun hasStartingEventGuard(): Boolean = startGuard[Guard.SLOT_EVENT_GUARD] != null
 
     //--Command-factory-------------------------------------------------------------------------------------------------
 
@@ -271,7 +292,4 @@ class Process(
     }
 
 
-    fun info(): ProcessInfo {
-        return ProcessInfo(pid, def)
-    }
 }
