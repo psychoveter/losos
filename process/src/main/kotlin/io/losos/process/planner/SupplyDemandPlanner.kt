@@ -2,6 +2,12 @@ package io.losos.process.planner
 
 import io.losos.platform.LososPlatform
 
+/**
+ * This is scratch idea, not implemented.
+ * Should be implemented as a part of backpressure strategy as
+ * 1) alternative implementation of subprocess planner
+ * 2) planner underneath ServiceActionManager
+ */
 
 data class JobSupply(
     val type: String

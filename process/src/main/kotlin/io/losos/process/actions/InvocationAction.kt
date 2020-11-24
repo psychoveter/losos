@@ -2,8 +2,8 @@ package io.losos.process.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.process.engine.Guard
 import io.losos.process.engine.ProcessContext
+import io.losos.process.engine.SlotId
 import io.losos.process.model.ActionDef
 import org.slf4j.LoggerFactory
 import java.lang.RuntimeException
@@ -28,32 +28,37 @@ import java.lang.RuntimeException
  * <b>SubProcess action</b> - create child sub-process using provided GANDef
  * @see io.losos.process.actions.SubProcessAction
  */
-class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext): AbstractAction<T>(def, ctx) {
+class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
+    AbstractAction<T>(def, ctx)
+{
 
     private val logger = LoggerFactory.getLogger(InvocationAction::class.java)
 
     companion object {
         const val GUARD_RESULT = "guard_result"
+        val SLOT_INPUT = SlotId.eventOnGuardId("???")
     }
 
     override suspend fun action(input: ActionInput) {
         //1. Rise guards
         val resultGuard = guard(def.guardResult) { addEventSlots() }
-
+        val resultPath = resultGuard.eventGuardSlot()!!.eventPath()
         when (def.invoke_type) {
             InvocationType.ASYNC -> {
                 throw RuntimeException("Not implemented")
             }
 
             InvocationType.SERVICE -> {
-                throw RuntimeException("Not implemented")
+                val config = ctx.platform().json2object(def.config, ServiceActionConfig::class.java)
+                val args = input.data(SLOT_INPUT, ObjectNode::class.java)
+                ctx.nodeManager().serviceActionManager.invokeService(config, args, resultPath)
             }
 
             InvocationType.SUBPROCESS -> {
                 val config = ctx.nodeManager().platform.json2object(def.config, SubprocessActionConfig::class.java)
                 val result = ctx.nodeManager().subprocessPlanner.assignSubprocess(
                     config.processName,
-                    resultGuard.eventGuardSlot()!!.eventPath(),
+                    resultPath,
                     config.args
                 )
                 if (result != null) {
@@ -61,7 +66,6 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext): Abs
                 }
             }
         }
-
     }
 }
 
@@ -83,4 +87,9 @@ open class InvocationActionDef (
 data class SubprocessActionConfig(
     val processName: String,
     val args: ObjectNode?
+)
+
+data class ServiceActionConfig(
+    val workerType: String,
+    val taskType: String
 )

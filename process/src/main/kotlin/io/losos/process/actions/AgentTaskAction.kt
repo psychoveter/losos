@@ -122,6 +122,7 @@ class AgentTaskAction(
                 processCtx.nodeManager().platform.object2json(task)
             )
     }
+
 }
 
 data class AgentTaskCtx(

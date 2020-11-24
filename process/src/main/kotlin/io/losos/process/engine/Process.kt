@@ -20,6 +20,7 @@ interface ProcessContext {
     //--general-methods-------------------------------------------------------------------------------------------------
 
     fun nodeManager(): NodeManager
+    fun platform() = nodeManager().platform
     fun definition(): ProcessDef
     fun pathState(): String
     fun pathRegistry(): String
@@ -64,14 +65,6 @@ data class ProcessStartCall (
     val args: ObjectNode?
 )
 
-data class ProcessResult(
-    val exitCode: ProcessExitCode,
-    val data: ObjectNode
-)
-
-enum class ProcessExitCode {
-    OK, FAILED
-}
 
 data class ProcessInfo(
     val pid: String,
@@ -89,6 +82,14 @@ data class CmdWork(val block: Process.() -> Unit): CmdGAN
 data class CmdAction(val action: Action<*>, val firedGuard: Guard): CmdGAN
 
 
+data class InvocationResult (
+    val exitCode: InvocationExitCode,
+    val data: ObjectNode
+)
+
+enum class InvocationExitCode {
+    OK, FAILED
+}
 
 /**
  * Guard-action network
@@ -207,10 +208,10 @@ class Process(
                 }
                 publishGuard(message.guard)
                 if (resultEventPath != null) {
-                    context.nodeManager().platform.put(
+                    context.platform().put(
                         resultEventPath,
-                        ProcessResult (
-                            ProcessExitCode.OK,
+                        InvocationResult (
+                            InvocationExitCode.OK,
                             message.guard.slotJson()
                         )
 
@@ -242,7 +243,7 @@ class Process(
             is CmdAction -> {
                 publishAction(message.action, message.firedGuard)
                 val cmds = try {
-                    message.action.execute(ActionInput(message.firedGuard.slots))
+                    message.action.execute(ActionInput(message.firedGuard.slots, context.platform()))
                 } catch (e: Exception) {
                     throw GANException(e)
                 }
@@ -285,7 +286,7 @@ class Process(
                     payload = guard.stateJson(),
                     newState = guard.state
             )
-            context.nodeManager().platform.put(guardEvent)
+            context.platform().put(guardEvent)
         }
     }
 
@@ -293,11 +294,11 @@ class Process(
         if(def.publishGuardEvents) {
             val evt = ActionEvent(
                     action.path(),
-                    context.nodeManager().platform.emptyObject(),
+                    context.platform().emptyObject(),
                     action,
                     firedGuard
             )
-            context.nodeManager().platform.put(evt)
+            context.platform().put(evt)
         }
     }
 
