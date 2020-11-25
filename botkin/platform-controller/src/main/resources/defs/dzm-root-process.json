@@ -49,12 +49,6 @@
       "type": "test",
       "message": "I'M DONE!! Now lets do kafka notification",
       "runGuards": ["guard_exit"]
-    },
-    {
-      "id": "action_fail",
-      "type": "test",
-      "message": "FAAAAAAAIL",
-      "runGuards": ["guard_exit"]
     }
   ]
 }
