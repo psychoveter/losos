@@ -24,7 +24,7 @@ data class NodeInfo (
     val processDefNames: Collection<String> = listOf()
 )
 
-class NodeManager(
+class NodeManager (
     val platform: LososPlatform,
     val processLibrary: ProcessLibrary,
     val serviceActionManager: ServiceActionManager? = null,

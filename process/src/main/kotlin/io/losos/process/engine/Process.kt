@@ -204,19 +204,21 @@ class Process(
                 handleGuardOpen(message.guard, message.guard.action)
                 if(message.guard.def.id == def.finishGuard) {
                     logger.info("Finish guard ${message.guard.def.id} opened: exit process")
+
+                    if (resultEventPath != null) {
+                        context.platform().put(
+                            resultEventPath,
+                            InvocationResult (
+                                InvocationExitCode.OK,
+                                message.guard.slotJson()
+                            )
+
+                        )
+                    }
+
                     close()
                 }
                 publishGuard(message.guard)
-                if (resultEventPath != null) {
-                    context.platform().put(
-                        resultEventPath,
-                        InvocationResult (
-                            InvocationExitCode.OK,
-                            message.guard.slotJson()
-                        )
-
-                    )
-                }
             }
             is CmdGuardTimeout -> {
                 logger.info("Guard timeout happens: ${message.guard.def.id}")

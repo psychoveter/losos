@@ -12,7 +12,7 @@ package io.losos
  *   /registry               | { name: "string", service_registry }
  *      /<node-name>         | NodeInfo
  *   /lease                  |
- *      /<node-name>         | without value
+ *      /<node-name>         |
  *   /library                |
  *      /<node-name>         |
  *         /<def name>       | ProcessDef

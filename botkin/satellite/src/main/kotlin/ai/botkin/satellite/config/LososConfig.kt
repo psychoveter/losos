@@ -9,6 +9,7 @@ import io.losos.platform.etcd.EtcdLososPlatform
 import io.losos.process.engine.NodeManager
 import io.losos.process.library.EtcdProcessLibrary
 import io.losos.process.library.ProcessLibrary
+import io.opentracing.Tracer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -25,6 +26,9 @@ open class LososConfig {
 
     @Value("\${losos.node-name:satellite-1}")
     lateinit var nodeName: String
+
+    @Autowired
+    lateinit var tracer: Tracer
 
     @Bean
     open fun restTemplate() = RestTemplate()
@@ -44,7 +48,7 @@ open class LososConfig {
         val manager = NodeManager(
             platform(),
             library(),
-            serviceActionManager = ServiceActionManagerImpl(restTemplate(), platform()),
+            serviceActionManager = ServiceActionManagerImpl(restTemplate(), platform(), tracer),
             //TODO: setup from environment
             name = nodeName,
             host = "localhost"
