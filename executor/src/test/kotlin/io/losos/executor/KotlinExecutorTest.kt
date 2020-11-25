@@ -48,7 +48,7 @@ class KotlinExecutorTest {
             //bus.subscribe(EventBus.agentTasksPath(agentName)) { log(it.toString()) }
             bus.subscribe(LososPlatform.PREFIX_AGENT_LEASE) {
                 logger.info(it.toString())
-                if(it.payload["action"].textValue() == "DELETE")
+                if(it.payload?.get("action")?.textValue() == "DELETE")
                     executorLeased.countDown()
             }
 

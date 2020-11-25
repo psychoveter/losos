@@ -54,7 +54,7 @@ class ProcessTest {
                 val relativePath = it.fullPath.removePrefix(gan.context.pathState())
                 logger.info("49 relativePath: $relativePath, fullPath: ${it.fullPath}")
                 if(relativePath.startsWith("/guard")) {
-                    val state = GuardState.valueOf(it.payload["state"]!!.textValue())
+                    val state = GuardState.valueOf(it.payload?.get("state")!!.textValue())
                     if(state == GuardState.OPENED)
                         guardSet.remove(relativePath)
                 }
