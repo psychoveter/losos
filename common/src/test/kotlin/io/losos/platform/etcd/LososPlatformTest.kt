@@ -13,17 +13,12 @@ import java.util.concurrent.CountDownLatch
 
 class LososPlatformTest {
 
-    companion object {
-        val jsonMapper = with(ObjectMapper()) {
-            registerModule(KotlinModule())
-        }
-    }
 
     @Test fun testSubs() {
         println("Test etcd subscription")
         val latch = CountDownLatch(2)
         connectToEtcd(TestUtils.Test.ETCD_URLS) { client ->
-            val bus = EtcdLososPlatform(client, jsonMapper)
+            val bus = EtcdLososPlatform(client, TestUtils.jsonMapper)
             val callback: suspend (e: Event<ObjectNode>) -> Unit = { event: Event<ObjectNode> ->
                 val text = "[${Thread.currentThread().name}] Received event: ${event.fullPath}: ${event.payload.toString()}"
                 println(text)
@@ -83,7 +78,7 @@ class LososPlatformTest {
             runBlocking {
                 val kaKey = "/watch/p1"
                 println("[${Thread.currentThread().name}] Create event bus")
-                val bus = EtcdLososPlatform(client, jsonMapper)
+                val bus = EtcdLososPlatform(client, TestUtils.jsonMapper)
 
                 println("[${Thread.currentThread().name}] Subscribe to KA")
                 val subs = bus.subscribeDelete(kaKey, callback)

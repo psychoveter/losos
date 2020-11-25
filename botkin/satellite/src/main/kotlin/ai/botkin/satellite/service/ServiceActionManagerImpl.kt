@@ -30,8 +30,8 @@ class ServiceActionManagerImpl(
     }
 
     private val serviceRegistry: Map<String, TEPServiceProvider> = mapOf(
-        SERVICE_ML to MLServiceProvider("http://192.168.2.5:8001", restTemplate, tracer),
         SERVICE_REPORTER to ReporterServiceProvider("http://192.168.2.5:8000", restTemplate, tracer),
+        SERVICE_ML to MLServiceProvider("http://192.168.2.5:8001", restTemplate, tracer),
         SERVICE_GATEWAY to GatewayServiceProvider("http://192.168.2.5:8002", restTemplate, tracer)
     )
 
