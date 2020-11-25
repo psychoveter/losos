@@ -123,17 +123,19 @@ class EtcdLososPlatform(
                          callback(kv2event(e.keyValue, clazz))
                     } catch (exc: Exception) {
                         logger.error("Failed to parse event: e[${e.stringify()}]", exc)
+                        throw RuntimeException(exc)
                     }
-                }
+8                }
                 else -> {}
             }
         }
 
         val watcher = client.watcher(
             keyName = path,
-            block = { response ->
-                response.events.forEach { action }
-            }
+            option = WatchOption.newBuilder()
+                .withPrevKV(true)
+                .build(),
+            block = { response -> response.events.forEach { action(it) } }
         )
         val subs = EtcdSubscription(
             UUID.randomUUID().toString(),

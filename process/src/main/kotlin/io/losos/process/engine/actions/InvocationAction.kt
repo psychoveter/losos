@@ -62,7 +62,7 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
 
             InvocationType.SERVICE_STUB -> {
                 val config = ctx.platform().json2object(def.config, ServiceActionStubConfig::class.java)
-                var args = input.data(SLOT_INPUT, ObjectNode::class.java)
+                val args = input.data(SLOT_INPUT, ObjectNode::class.java)
 
                 Thread {
                     Thread.sleep(config.delay)
