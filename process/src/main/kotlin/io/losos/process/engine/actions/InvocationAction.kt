@@ -2,6 +2,8 @@ package io.losos.process.engine.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.process.engine.InvocationExitCode
+import io.losos.process.engine.InvocationResult
 import io.losos.process.engine.ProcessContext
 import io.losos.process.engine.SlotId
 import io.losos.process.model.ActionDef
@@ -58,6 +60,21 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
                 }
             }
 
+            InvocationType.SERVICE_STUB -> {
+                val config = ctx.platform().json2object(def.config, ServiceActionStubConfig::class.java)
+                var args = input.data(SLOT_INPUT, ObjectNode::class.java)
+
+                Thread {
+                    Thread.sleep(config.delay)
+                    logger.info("[STUB_SERVICE]: args = ${args}")
+                    ctx.platform().put(resultEventPath, InvocationResult(
+                        if (config.fail) InvocationExitCode.FAILED else InvocationExitCode.OK,
+                        ctx.platform().emptyObject()
+                            .put("key", "value")
+                    ))
+                }.start()
+            }
+
             InvocationType.SUBPROCESS -> {
                 val config = ctx.nodeManager().platform.json2object(def.config, SubprocessActionConfig::class.java)
                 val result = ctx.nodeManager().subprocessPlanner.assignSubprocess(
@@ -74,7 +91,8 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
 }
 
 enum class InvocationType {
-    ASYNC, SUBPROCESS, SERVICE
+    ASYNC, SUBPROCESS, SERVICE,
+    SERVICE_STUB
 }
 
 @JsonTypeName("invoke")
@@ -96,4 +114,11 @@ data class SubprocessActionConfig(
 data class ServiceActionConfig(
     val workerType: String,
     val taskType: String
+)
+
+data class ServiceActionStubConfig(
+    val workerType: String,
+    val taskType: String,
+    val delay: Long = 1000,
+    val fail: Boolean = false
 )

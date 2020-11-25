@@ -27,8 +27,10 @@ open class LososConfig {
     @Value("\${losos.node-name:satellite-1}")
     lateinit var nodeName: String
 
-    @Autowired
-    lateinit var tracer: Tracer
+    @Bean
+    open fun tracer():Tracer {
+        return io.jaegertracing.Configuration.fromEnv(nodeName).tracer
+    }
 
     @Bean
     open fun restTemplate() = RestTemplate()
@@ -48,7 +50,7 @@ open class LososConfig {
         val manager = NodeManager(
             platform(),
             library(),
-            serviceActionManager = ServiceActionManagerImpl(restTemplate(), platform(), tracer),
+            serviceActionManager = ServiceActionManagerImpl(restTemplate(), platform(), tracer()),
             //TODO: setup from environment
             name = nodeName,
             host = "localhost"

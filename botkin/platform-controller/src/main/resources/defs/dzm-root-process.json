@@ -41,7 +41,7 @@
       "type": "invoke",
       "invoke_type": "SUBPROCESS",
       "config": {
-        "processName": "CTDZM"
+        "processName": "CTDZM_STUB"
       }
     },
     {

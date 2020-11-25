@@ -105,6 +105,17 @@ class ProcessManager (
             if (def == null) {
                 logger.error("No process def for name ${call.procName}, " +
                              "available: ${nodeManager.processLibrary.getAvailableProcesses().keys}")
+
+                if (call.resultEventPath != null) {
+                    nodeManager.platform.put(
+                        call.resultEventPath,
+                        InvocationResult (
+                            InvocationExitCode.FAILED,
+                            nodeManager.platform.emptyObject()
+                                .put("reason", "Process def ${call.procName} not found")
+                        )
+                    )
+                }
             } else {
                 restoreProcess(
                     pid = call.pid,
