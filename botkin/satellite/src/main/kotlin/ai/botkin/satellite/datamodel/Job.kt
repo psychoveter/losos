@@ -1,5 +1,6 @@
 package botkin.ai.datamodel
 
+
 import botkin.ai.Context
 import botkin.ai.NitriteManager
 import org.dizitart.kno2.filters.eq
