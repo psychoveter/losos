@@ -42,7 +42,7 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
     override suspend fun action(input: ActionInput) {
         //1. Rise guards
         val resultGuard = guard(def.guardResult) { addEventSlots() }
-        val resultPath = resultGuard.eventGuardSlot()!!.eventPath()
+        val resultEventPath = resultGuard.eventGuardSlot()!!.eventPath()
         when (def.invoke_type) {
             InvocationType.ASYNC -> {
                 throw RuntimeException("Not implemented")
@@ -52,7 +52,7 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
                 if (ctx.nodeManager().serviceActionManager != null) {
                     val config = ctx.platform().json2object(def.config, ServiceActionConfig::class.java)
                     val args = input.data(SLOT_INPUT, ObjectNode::class.java)
-                    ctx.nodeManager().serviceActionManager!!.invokeService(config, args!!, resultPath)
+                    ctx.nodeManager().serviceActionManager!!.invokeService(config, args!!, resultEventPath)
                 } else {
                     throw RuntimeException("ServiceActionManager is not configured")
                 }
@@ -62,7 +62,7 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
                 val config = ctx.nodeManager().platform.json2object(def.config, SubprocessActionConfig::class.java)
                 val result = ctx.nodeManager().subprocessPlanner.assignSubprocess(
                     config.processName,
-                    resultPath,
+                    resultEventPath,
                     config.args
                 )
                 if (result != null) {
