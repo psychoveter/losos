@@ -7,6 +7,7 @@ import io.losos.process.engine.InvocationResult
 import io.losos.process.engine.ProcessContext
 import io.losos.process.engine.SlotId
 import io.losos.process.model.ActionDef
+import io.losos.process.planner.ServiceTask
 import org.slf4j.LoggerFactory
 import java.lang.RuntimeException
 
@@ -53,8 +54,11 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
             InvocationType.SERVICE -> {
                 if (ctx.nodeManager().serviceActionManager != null) {
                     val config = ctx.platform().json2object(def.config, ServiceActionConfig::class.java)
-                    val args = input.data(SLOT_INPUT, ObjectNode::class.java)
-                    ctx.nodeManager().serviceActionManager!!.invokeService(config, args!!, resultEventPath)
+                    val args = input.data(SLOT_INPUT, ObjectNode::class.java) ?: ctx.platform().emptyObject()
+                    ctx.nodeManager().serviceActionManager!!.invokeService(
+                        ServiceTask(config.workerType, config.taskType, args),
+                        resultEventPath
+                    )
                 } else {
                     throw RuntimeException("ServiceActionManager is not configured")
                 }

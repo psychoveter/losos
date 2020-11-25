@@ -9,6 +9,8 @@ import io.losos.process.engine.actions.ServiceActionConfig
 import io.losos.process.planner.*
 import io.opentracing.Span
 import io.opentracing.Tracer
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.web.client.RestTemplate
@@ -35,27 +37,29 @@ class ServiceActionManagerImpl(
         SERVICE_GATEWAY to GatewayServiceProvider("http://192.168.2.5:8002", restTemplate, tracer)
     )
 
-    private val taskQueue: Map<String, ConcurrentLinkedQueue<ObjectNode>> = mapOf (
+    private val taskQueue: Map<String, ConcurrentLinkedQueue<ServiceTask>> = mapOf (
         SERVICE_ML to ConcurrentLinkedQueue(),
         SERVICE_REPORTER to ConcurrentLinkedQueue(),
         SERVICE_GATEWAY to ConcurrentLinkedQueue()
     )
 
-    private val taskRequests: MutableMap<String, Int> = mutableMapOf(
+    private val taskRequests: MutableMap<String, Int> = mutableMapOf (
         SERVICE_ML to 0,
         SERVICE_REPORTER to 0,
         SERVICE_GATEWAY to 0
     )
 
     /**
-     * This method is called by service to request task for execution
+     * This method is called by rest controller to request task for execution
      */
     fun requestTask(workerType: String) {
         taskRequests[workerType] = taskRequests[workerType]!! + 1
     }
 
+    @Volatile var isRunning = true
     override fun start() {
         //start task post loop
+
     }
 
     override fun stop() {
@@ -67,14 +71,13 @@ class ServiceActionManagerImpl(
      * @see io.losos.process.actions.InvocationAction
      */
     override fun invokeService(
-        config: ServiceActionConfig,
-        args: ObjectNode,
+        serviceTask: ServiceTask,
         resultEventPath: String
     ) {
-        val workerType = config.workerType
-        val taskType = config.taskType
+        val workerType = serviceTask.workerType
+        val taskType = serviceTask.taskType
         if (serviceRegistry.containsKey(workerType)) {
-            taskQueue[workerType]!!.add(args)
+            taskQueue[workerType]!!.add(serviceTask)
         } else throw RuntimeException("No service of workerType $workerType")
     }
 }
