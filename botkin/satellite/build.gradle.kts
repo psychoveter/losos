@@ -73,5 +73,5 @@ tasks.withType<KotlinCompile>() {
     kotlinOptions.jvmTarget = "1.8"
 }
 application {
-    mainClassName = "botkin.ai.ApplicationKt"
+    mainClassName = "ai.botkin.satellite.SatelliteApplication"
 }
