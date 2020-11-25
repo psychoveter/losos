@@ -1,4 +1,4 @@
-package io.losos.process.actions
+package io.losos.process.engine.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -49,9 +49,13 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
             }
 
             InvocationType.SERVICE -> {
-                val config = ctx.platform().json2object(def.config, ServiceActionConfig::class.java)
-                val args = input.data(SLOT_INPUT, ObjectNode::class.java)
-                ctx.nodeManager().serviceActionManager.invokeService(config, args, resultPath)
+                if (ctx.nodeManager().serviceActionManager != null) {
+                    val config = ctx.platform().json2object(def.config, ServiceActionConfig::class.java)
+                    val args = input.data(SLOT_INPUT, ObjectNode::class.java)
+                    ctx.nodeManager().serviceActionManager!!.invokeService(config, args!!, resultPath)
+                } else {
+                    throw RuntimeException("ServiceActionManager is not configured")
+                }
             }
 
             InvocationType.SUBPROCESS -> {

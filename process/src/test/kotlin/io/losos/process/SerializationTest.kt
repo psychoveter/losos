@@ -1,7 +1,7 @@
 package io.losos.process
 
 import io.losos.TestUtils
-import io.losos.process.actions.TestActionDef
+import io.losos.process.engine.actions.TestActionDef
 import io.losos.process.engine.EventOnGuardSlotDef
 import io.losos.process.model.*
 import org.junit.Assert

@@ -1,4 +1,4 @@
-package io.losos.process.actions
+package io.losos.process.engine.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import io.losos.process.engine.*

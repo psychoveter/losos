@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.KeyConvention
 import io.losos.platform.Event
 import io.losos.platform.Subscription
-import io.losos.process.actions.*
+import io.losos.process.engine.actions.*
 import io.losos.process.model.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job

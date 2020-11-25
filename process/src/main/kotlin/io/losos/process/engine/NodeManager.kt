@@ -2,15 +2,13 @@ package io.losos.process.engine
 
 import io.losos.KeyConvention
 import io.losos.platform.LososPlatform
-import io.losos.process.engine.action.AsyncActionManager
-import io.losos.process.engine.action.ServiceActionManager
+import io.losos.process.planner.AsyncActionManager
+import io.losos.process.planner.ServiceActionManager
 import io.losos.process.library.ProcessLibrary
-import io.losos.process.model.ProcessDef
 import io.losos.process.planner.SubprocessPlanner
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
+import org.springframework.web.client.RestTemplate
+import java.security.Provider
 import java.util.*
 
 
@@ -31,6 +29,7 @@ data class NodeInfo (
 class NodeManager(
     val platform: LososPlatform,
     val processLibrary: ProcessLibrary,
+    val serviceActionManager: ServiceActionManager? = null,
     val name: String = UUID.randomUUID().toString(),
     val host: String = "localhost",
     val idGen: IDGenerator = IDGenUUID
@@ -40,9 +39,7 @@ class NodeManager(
 
     val processManager = ProcessManager(this)
     val asyncActionManager = AsyncActionManager(this)
-    val serviceActionManager = ServiceActionManager(this)
     val subprocessPlanner = SubprocessPlanner(platform)
-
 
     private var isRunning = true
     private val leaseThread = Thread {

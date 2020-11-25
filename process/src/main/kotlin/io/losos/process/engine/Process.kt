@@ -3,8 +3,8 @@ package io.losos.process.engine
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.platform.Event
 import io.losos.actor.Actor
-import io.losos.process.actions.Action
-import io.losos.process.actions.ActionInput
+import io.losos.process.engine.actions.Action
+import io.losos.process.engine.actions.ActionInput
 import io.losos.process.engine.exc.GANException
 import io.losos.process.engine.exc.WorkException
 import io.losos.process.model.*

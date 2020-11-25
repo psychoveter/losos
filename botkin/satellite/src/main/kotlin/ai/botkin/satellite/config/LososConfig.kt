@@ -1,5 +1,6 @@
 package ai.botkin.satellite.config
 
+import ai.botkin.satellite.service.ServiceActionManagerImpl
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.etcd.recipes.common.connectToEtcd
 import io.losos.KeyConvention
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.web.client.RestTemplate
 
 @Configuration
 open class LososConfig {
@@ -23,6 +25,9 @@ open class LososConfig {
 
     @Value("\${losos.node-name:satellite-1}")
     lateinit var nodeName: String
+
+    @Bean
+    open fun restTemplate() = RestTemplate()
 
     @Bean
     open fun platform(): LososPlatform {
@@ -39,7 +44,7 @@ open class LososConfig {
         val manager = NodeManager(
             platform(),
             library(),
-
+            serviceActionManager = ServiceActionManagerImpl(restTemplate(), platform()),
             //TODO: setup from environment
             name = nodeName,
             host = "localhost"

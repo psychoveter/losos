@@ -12,4 +12,10 @@ dependencies {
     compile "org.slf4j:slf4j-api:1.7.29"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation 'org.springframework.boot:spring-boot-starter-web'
+
+
+    //opentracing
+    implementation("io.jaegertracing:jaeger-client:1.5.0")
+    implementation("io.opentracing.contrib:opentracing-spring-web-starter:4.1.0")
+
 }

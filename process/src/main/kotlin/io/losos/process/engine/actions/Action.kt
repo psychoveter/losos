@@ -1,4 +1,4 @@
-package io.losos.process.actions
+package io.losos.process.engine.actions
 
 import io.losos.process.engine.*
 import io.losos.process.model.ActionDef

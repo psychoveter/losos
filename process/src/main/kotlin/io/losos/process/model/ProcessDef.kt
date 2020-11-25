@@ -3,9 +3,9 @@ package io.losos.process.model
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import io.losos.process.actions.AgentTaskActionDef
-import io.losos.process.actions.InvocationActionDef
-import io.losos.process.actions.TestActionDef
+import io.losos.process.engine.actions.AgentTaskActionDef
+import io.losos.process.engine.actions.InvocationActionDef
+import io.losos.process.engine.actions.TestActionDef
 import io.losos.process.engine.EventCustomSlotDef
 import io.losos.process.engine.EventOnGuardSlotDef
 import io.losos.process.engine.VarSlotDef
