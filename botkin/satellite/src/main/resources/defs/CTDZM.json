@@ -1,0 +1,101 @@
+{
+  "name": "CTDZM",
+  "description": "Simple linear sequence of actions with two controller actions and one remote",
+  "startGuard": "guard_start",
+  "finishGuard": "action_report_upload/guard_result",
+  "publishGuardEvents": true,
+
+  "guards": [
+    {
+      "id": "guard_start",
+      "slots": {
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
+        }
+      },
+      "action": "action_study_download"
+    },
+    {
+      "id": "action_study_download/guard_result",
+      "slots": {
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
+        }
+      },
+      "action": "action_ml"
+    },
+    {
+      "id": "action_ml/guard_result",
+      "slots": {
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
+        }
+      },
+      "action": "action_report"
+    },
+    {
+      "id": "action_report/guard_result",
+      "slots": {
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
+        }
+      },
+      "action": "action_report_upload"
+    },
+    {
+      "id": "action_report_upload/guard_result",
+      "slots": {
+        "guard": {
+          "name": "guard",
+          "type": "event_on_guard"
+        }
+      },
+      "action": null
+    }
+  ],
+
+  "guardRelations": [],
+
+  "actions": [
+    {
+      "id": "action_study_download",
+      "type": "invoke",
+      "invoke_type": "SERVICE",
+      "config": {
+        "workerType": "gateway",
+        "taskType": "download_study"
+      }
+    },
+    {
+      "id": "action_ml",
+      "type": "invoke",
+      "invoke_type": "SERVICE",
+      "config": {
+        "workerType": "ml",
+        "taskType": "CTCR2"
+      }
+    },
+    {
+      "id": "action_report",
+      "type": "invoke",
+      "invoke_type": "SERVICE",
+      "config": {
+        "workerType": "reporter",
+        "taskType": "SR,SC"
+      }
+    },
+    {
+      "id": "action_report_upload",
+      "type": "invoke",
+      "invoke_type": "SERVICE",
+      "config": {
+        "workerType": "gateway",
+        "taskType": "report_upload"
+      }
+    }
+  ]
+}
