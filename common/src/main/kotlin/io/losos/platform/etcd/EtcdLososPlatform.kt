@@ -120,7 +120,7 @@ class EtcdLososPlatform(
             when (e.eventType) {
                 WatchEvent.EventType.DELETE -> GlobalScope.launch {
                     try {
-                         callback(kv2event(e.keyValue, clazz))
+                         callback(kv2event(e.prevKV, clazz))
                     } catch (exc: Exception) {
                         logger.error("Failed to parse event: e[${e.stringify()}]", exc)
                         throw RuntimeException(exc)
@@ -135,7 +135,9 @@ class EtcdLososPlatform(
             option = WatchOption.newBuilder()
                 .withPrevKV(true)
                 .build(),
-            block = { response -> response.events.forEach { action(it) } }
+            block = { response ->
+                response.events.forEach { action(it) }
+            }
         )
         val subs = EtcdSubscription(
             UUID.randomUUID().toString(),

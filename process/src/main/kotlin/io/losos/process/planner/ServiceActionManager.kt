@@ -10,8 +10,13 @@ interface ServiceActionManager {
     fun stop()
 
     fun invokeService(
-        config: ServiceActionConfig,
-        args: ObjectNode,
+        serviceTask: ServiceTask,
         resultEventPath: String
     )
 }
+
+data class ServiceTask(
+    val workerType: String,
+    val taskType: String,
+    val args: ObjectNode
+)

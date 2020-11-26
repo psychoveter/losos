@@ -16,7 +16,7 @@ class LososPlatformTest {
 
     val logger = LoggerFactory.getLogger(LososPlatformTest::class.java)
 
-//    @Test
+    @Test
     fun testSubs() {
         logger.info("Test etcd subscription")
         val latch = CountDownLatch(2)
@@ -53,7 +53,7 @@ class LososPlatformTest {
         }
     }
 
-//    @Test
+    @Test
     fun testKeepAliveUsual() {
         testKeepAliveWithAction {
             (1..5).forEach { i ->
@@ -63,7 +63,7 @@ class LososPlatformTest {
         }
     }
 
-//    @Test
+    @Test
     fun testKeepAliveExceptional() {
         testKeepAliveWithAction {
             throw RuntimeException("Something goes wrong")
