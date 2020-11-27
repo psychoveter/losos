@@ -1,8 +1,10 @@
 package ai.botkin.satellite.service
 
-import ai.botkin.satellite.task.Request
+import ai.botkin.satellite.task.*
 import ai.botkin.satellite.tracing.CustomTracingRestTemplateInterceptor
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.losos.platform.LososPlatform
 import io.losos.process.engine.NodeManager
 import io.losos.process.engine.actions.ServiceActionConfig
@@ -20,9 +22,11 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * Service manager implements Task Execution Protocol
  */
 class ServiceActionManagerImpl(
+
     val restTemplate: RestTemplate,
     val platform: LososPlatform,
     val tracer: Tracer
+
 ): ServiceActionManager {
 
     companion object {
@@ -66,6 +70,31 @@ class ServiceActionManagerImpl(
         //stop task post loop
     }
 
+    fun assembleTask(workerType: String, taskType:String,  args:ObjectNode):Any {
+        val mapper = jacksonObjectMapper()
+        when (workerType) {
+            SERVICE_ML -> {
+                mapper.readValue(args.traverse(), MLTask::class.java)
+
+            }
+
+            SERVICE_REPORTER -> {
+                mapper.readValue(args.traverse(), ReportTask::class.java)
+            }
+
+            SERVICE_GATEWAY -> {
+                when (taskType) {
+                    "download" -> {
+                        mapper.readValue(args.traverse(), DownloadTask::class.java)
+                    }
+                    "upload" -> {
+                        mapper.readValue(args.traverse(), UploadTask::class.java)
+                    }
+                }
+            }
+        }
+        throw RuntimeException("Invalid worker type $workerType or task type $taskType")
+    }
 
     /**
      * @see io.losos.process.actions.InvocationAction
@@ -135,6 +164,6 @@ class GatewayServiceProvider(
     tracer: Tracer
 ): AbstractTEPServiceProvider(url, rest, tracer) {
     override fun postTask(workerType: String) {
-        TODO("Not yet implemented")
+//        postEntity()
     }
 }

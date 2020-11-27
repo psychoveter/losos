@@ -18,7 +18,7 @@ fun timeFromStarted() = System.currentTimeMillis() - started
 object TestUtils {
 
     object Test {
-        val ETCD_URLS = listOf("http://81.29.130.10:2379")
+        val ETCD_URLS = listOf("http://127.0.0.1:2379")
     }
 
     var loggersEnabled  = mapOf<String, Boolean>()

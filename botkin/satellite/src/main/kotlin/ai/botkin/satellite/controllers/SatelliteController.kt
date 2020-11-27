@@ -1,9 +1,10 @@
 package botkin.ai.controllers
 
-
 import ai.botkin.satellite.task.JobRequest
 import botkin.ai.datamodel.*
 import botkin.ai.messages.*
+import io.losos.platform.LososPlatform
+import io.losos.process.engine.NodeManager
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
@@ -41,7 +42,7 @@ class SatelliteController {
         messageQueue.add(Schedule(workerType=workerType))
         return ResponseEntity<String>(
             "Ok",
-            HttpStatus.OK);
+            HttpStatus.OK)
     }
 
     @PostMapping("/ok")
@@ -89,6 +90,7 @@ class SatelliteController {
     //getting job from parent wf
     fun postJob(@RequestBody jobRequest: JobRequest):ResponseEntity<String>{
         messageQueue.add(ScheduleJob(workerType = "satellite", studyUID = jobRequest.studyUID, target = jobRequest.target))
+
         return ResponseEntity("ok", HttpStatus.OK)
     }
     @GetMapping("/jobs")
