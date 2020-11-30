@@ -3,8 +3,9 @@ package io.losos.process.engine
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.platform.Event
-import io.losos.process.engine.actions.Action
+import io.losos.process.engine.actions.*
 import io.losos.process.model.GuardDef
+import io.losos.process.model.GuardSignature
 import io.losos.process.model.GuardState
 import io.losos.process.model.GuardType
 import org.slf4j.LoggerFactory
@@ -39,7 +40,7 @@ class Guard(
     val type: GuardType,
     val context: ProcessManager.ProcessContext,
     val action: Action<*>?,
-    val slots: MutableMap<String, Slot> = mutableMapOf(),
+    val slots: MutableMap<String, Slot<*>> = mutableMapOf(),
     val timeout: Long = -1,
     val timeoutAction: Action<*>? = null,
     val incarnation: Int = 1
@@ -61,7 +62,7 @@ class Guard(
         internal set
 
     internal fun accept(e: Event<ObjectNode>): Boolean = slots.values
-            .filterIsInstance<EventOnGuardSlot>()
+            .filterIsInstance<EventOnGuardSlot<ObjectNode>>()
             .filter { it.isEmpty() }
             .map { it.accept(e) }
             .fold(false) { a, b -> a || b }
@@ -89,24 +90,24 @@ class Guard(
 
 
     fun allSlotsFilled(): Boolean = slots.values
-            .filterIsInstance<EventOnGuardSlot>()
+            .filterIsInstance<EventOnGuardSlot<ObjectNode>>()
             .map { !it.isEmpty() }
             .fold(true) { a,b -> a && b }
 
     fun anySlotFilled(): Boolean = if (slots.isEmpty()) true
     else slots.values
-            .filterIsInstance<EventOnGuardSlot>()
+            .filterIsInstance<EventOnGuardSlot<ObjectNode>>()
             .map { !it.isEmpty() }
             .fold(false) { a,b -> a || b }
 
 
-    fun getEventSlots(): List<EventSlot> = slots.values.filterIsInstance<EventSlot>()
+    fun getEventSlots(): List<EventSlot<ObjectNode>> = slots.values.filterIsInstance<EventSlot<ObjectNode>>()
 
     @Suppress("UNCHECKED_CAST")
-    operator fun <T: Slot> get(id: String): T? = slots[id] as? T
+    operator fun <T: Slot<*>> get(id: String): T? = slots[id] as? T
 
     @Suppress("UNCHECKED_CAST")
-    operator fun <T: Slot> get(id: SlotId<T>): T? = slots[id.name] as? T
+    operator fun <T: Slot<*>> get(id: SlotId<T>): T? = slots[id.name] as? T
 
     fun path(): String = "${context.pathState()}/guard/${def.id}/1"
 
@@ -120,9 +121,9 @@ class Guard(
 
 
     @Suppress("UNCHECKED_CAST")
-    fun <T: Slot> slot(slotId: SlotId<T>, block: T.() -> Unit = {}): T {
-        val slot: Slot = when(slotId.clazz) {
-            VarSlot::class -> varSlot(slotId.name, block as VarSlot.() -> Unit)
+    fun <T: Slot<*>> slot(slotId: SlotId<T>, block: T.() -> Unit = {}): T {
+        val slot: Slot<*> = when(slotId.clazz) {
+            VarSlot::class -> varSlot(slotId.name, block as VarSlot<Any?>.() -> Unit)
             EventCustomSlot::class -> eventCustomSlot(slotId.name)
             EventOnGuardSlot::class -> eventOnGuardSlot(slotId.name)
             else -> throw RuntimeException("Unsupported slot type")
@@ -131,12 +132,12 @@ class Guard(
         return slot as T
     }
 
-    private fun eventOnGuardSlot(name: String): EventOnGuardSlot {
+    private fun eventOnGuardSlot(name: String): EventOnGuardSlot<ObjectNode> {
         val slotDef: EventOnGuardSlotDef = def.slots[name] as EventOnGuardSlotDef
         return EventOnGuardSlot(slotDef.name, this)
     }
 
-    private fun eventCustomSlot(name: String): EventCustomSlot {
+    private fun eventCustomSlot(name: String): EventCustomSlot<ObjectNode> {
         val slotDef: EventCustomSlotDef = def.slots[name] as EventCustomSlotDef
         val selectorDef = slotDef.selector
         val selector = when(selectorDef) {
@@ -147,8 +148,8 @@ class Guard(
         return EventCustomSlot(slotDef.name, this, selector)
     }
 
-    private fun varSlot(name: String, block: VarSlot.() -> Unit): VarSlot {
-        val slot = VarSlot(name, this)
+    private fun <T> varSlot(name: String, block: VarSlot<T>.() -> Unit): VarSlot<T> {
+        val slot = VarSlot<T>(name, this)
         slot.block()
         return slot
     }
@@ -167,11 +168,30 @@ class Guard(
                                             .put("state", state.name)
     fun slotJson(): ObjectNode = context.nodeManager().platform.jsonMapper.createObjectNode().apply {
         slots.values
-            .filterIsInstance<SlotWithValue<*>>()
             .forEach {
                 val name = it.id
                 val value = context.nodeManager().platform.object2json(it.data)
                 this.put(name, value)
             }
+    }
+
+    fun toActionInput(): ActionInput {
+        if (!canBeOpened())
+            throw RuntimeException("Cannot generate ActionInput: Guard is not opened")
+
+        return when (def.signature) {
+            GuardSignature.SINGLE -> {
+                val data = slots.values.first().data
+                ActionInputSingle(data)
+            }
+            GuardSignature.ARRAY -> {
+                val data = slots.values.map { it.data }.toList()
+                ActionInputList(data)
+            }
+            GuardSignature.MAP -> {
+                val data = slots.entries.map { it.key to it.value.data }.toMap()
+                ActionInputMap(data)
+            }
+        }
     }
 }

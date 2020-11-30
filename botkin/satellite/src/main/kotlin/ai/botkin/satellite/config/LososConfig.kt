@@ -9,6 +9,7 @@ import io.losos.platform.etcd.EtcdLososPlatform
 import io.losos.process.engine.NodeManager
 import io.losos.process.library.EtcdProcessLibrary
 import io.losos.process.library.ProcessLibrary
+import io.losos.process.planner.ServiceActionManager
 import io.opentracing.Tracer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -46,11 +47,14 @@ open class LososConfig {
     open fun library(): ProcessLibrary = EtcdProcessLibrary(platform(), KeyConvention.keyNodeLibrary(nodeName))
 
     @Bean
+    open fun serviceManager(): ServiceActionManager = ServiceActionManagerImpl(restTemplate(), platform(), tracer())
+
+    @Bean
     open fun nodeManager(): NodeManager {
         val manager = NodeManager(
             platform(),
             library(),
-            serviceActionManager = ServiceActionManagerImpl(restTemplate(), platform(), tracer()),
+            serviceActionManager = serviceManager(),
             //TODO: setup from environment
             name = nodeName,
             host = "localhost"

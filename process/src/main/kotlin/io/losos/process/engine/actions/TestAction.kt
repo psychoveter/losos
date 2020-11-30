@@ -10,11 +10,10 @@ import kotlinx.coroutines.delay
 
 class TestAction(def: TestActionDef, ctx: ProcessContext): AbstractAction<TestActionDef>(def, ctx) {
     override suspend fun action(input: ActionInput) {
-        logInfo("Action ${def.id} is executing. Input: ${input.jsonData(context.nodeManager().platform)}")
+        logInfo("Action ${def.id} is executing. Input: $input")
         if(def.message != null)
             logInfo(def.message)
 
-        input.slots.forEach{ logInfo("Slot received: ${it.toString()}" ) }
         delay(def.delay)
         def.runGuards.forEach {
             guard(it) {addEventSlots()}

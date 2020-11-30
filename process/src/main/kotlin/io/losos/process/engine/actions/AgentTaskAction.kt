@@ -25,102 +25,107 @@ class AgentTaskAction(
 
     override suspend fun action(input: ActionInput) {
         logInfo("start agent task action")
-        val taskCtx: AgentTaskCtx = with(input[SLOT_CTX]){ this?.data as? AgentTaskCtx}
+        val inputMap = input as ActionInputMap
+
+
+        val taskCtx: AgentTaskCtx = (inputMap["ctx"] as? AgentTaskCtx)
                                     ?: AgentTaskCtx(0, null, ctx.nodeManager().platform.emptyObject())
-        val exception: Event<ObjectNode>? = with(input[SLOT_EXCEPTION]){ this?.data }
-        val inputSlots: Map<String, Slot> = input.slots.filterKeys { it != SLOT_CTX.name && it != SLOT_EXCEPTION.name }
+        val exception: ObjectNode? = inputMap["exception"] as? ObjectNode
 
-        //first run
-        if ( taskCtx.attempt == 0L ) {
-            when(def.schedulePolicy.policy) {
-                SchedulePolicyType.DIRECT -> {
-                    //fire success guard
-                    val gSuccess = guard(def.guardSuccess) {
-                        slot(SLOT_RESPONSE)
-                        slot(SLOT_CTX) { withPayload(taskCtx) }
-                    }
-                    //fire failure_light guard
-                    val gRetry = guard(def.guardRetry) {
-                        slot(SLOT_EXCEPTION)
-                        slot(SLOT_CTX) { withPayload(taskCtx) }
-                    }
-                    //fire failure_total guard
-                    val gFailure = guard(def.guardFailure) {
-                        slot(SLOT_EXCEPTION)
-                    }
-                    scheduleOnProcess {
-                        placeTask(
-                                this.context,
-                                self.def.schedulePolicy.agentId!!,
-                                inputSlots,
-                                gSuccess[SLOT_RESPONSE]!!.eventPath(),
-                                gRetry[SLOT_EXCEPTION]!!.eventPath(),
-                                gFailure[SLOT_EXCEPTION]!!.eventPath()
-                        )
-                    }
-                }
 
-                SchedulePolicyType.TAGS_LEAST_LOADED -> {
-                    TODO("Unsupported schedule policy")
-                }
-
-                SchedulePolicyType.CRITERION -> {
-                    TODO("Unsupported schedule policy")
-                }
-            }
-        }
-
-        if ( taskCtx.attempt > 0L ) {
-            when(def.schedulePolicy.reschedulePolicy) {
-                ReschedulePolicyType.THE_SAME -> {
-                    scheduleOnProcess {
-                        placeTask(this.context, taskCtx.previousAgent!!, inputSlots,
-                                "",
-                                "",
-                                "")
-                    }
-                }
-                ReschedulePolicyType.ANOTHER -> {
-                    TODO("Unsupported reschedule policy")
-                }
-                ReschedulePolicyType.SCHEDULE_AGAIN -> {
-                    TODO("Unsupported reschedule policy")
-                }
-            }
-        }
+//        val inputSlots: Map<String, Any> = input.slots.filterKeys { it != SLOT_CTX.name && it != SLOT_EXCEPTION.name }
+//
+//        //first run
+//        if ( taskCtx.attempt == 0L ) {
+//            when(def.schedulePolicy.policy) {
+//                SchedulePolicyType.DIRECT -> {
+//                    //fire success guard
+//                    val gSuccess = guard(def.guardSuccess) {
+//                        slot(SLOT_RESPONSE)
+//                        slot(SLOT_CTX) { withPayload(taskCtx) }
+//                    }
+//                    //fire failure_light guard
+//                    val gRetry = guard(def.guardRetry) {
+//                        slot(SLOT_EXCEPTION)
+//                        slot(SLOT_CTX) { withPayload(taskCtx) }
+//                    }
+//                    //fire failure_total guard
+//                    val gFailure = guard(def.guardFailure) {
+//                        slot(SLOT_EXCEPTION)
+//                    }
+//                    scheduleOnProcess {
+//                        placeTask(
+//                                this.context,
+//                                self.def.schedulePolicy.agentId!!,
+//                                inputSlots,
+//                                gSuccess[SLOT_RESPONSE]!!.eventPath(),
+//                                gRetry[SLOT_EXCEPTION]!!.eventPath(),
+//                                gFailure[SLOT_EXCEPTION]!!.eventPath()
+//                        )
+//                    }
+//                }
+//
+//                SchedulePolicyType.TAGS_LEAST_LOADED -> {
+//                    TODO("Unsupported schedule policy")
+//                }
+//
+//                SchedulePolicyType.CRITERION -> {
+//                    TODO("Unsupported schedule policy")
+//                }
+//            }
+//        }
+//
+//        if ( taskCtx.attempt > 0L ) {
+//            when(def.schedulePolicy.reschedulePolicy) {
+//                ReschedulePolicyType.THE_SAME -> {
+//                    scheduleOnProcess {
+//                        placeTask(this.context, taskCtx.previousAgent!!, inputSlots,
+//                                "",
+//                                "",
+//                                "")
+//                    }
+//                }
+//                ReschedulePolicyType.ANOTHER -> {
+//                    TODO("Unsupported reschedule policy")
+//                }
+//                ReschedulePolicyType.SCHEDULE_AGAIN -> {
+//                    TODO("Unsupported reschedule policy")
+//                }
+//            }
+//        }
 
     }
 
     private fun placeTask(
-        processCtx: ProcessContext,
-        agentId: String,
-        input: Map<String, Slot>,
-        successEventPath: String,
-        retryEventPath: String,
-        failureEventPath: String
+//        processCtx: ProcessContext,
+//        agentId: String,
+//        input: Map<String, Slot>,
+//        successEventPath: String,
+//        retryEventPath: String,
+//        failureEventPath: String
     ) {
-        val id = UUID.randomUUID().toString()
-        val payload: ObjectNode = TestUtils.jsonMapper.createObjectNode()
-        logInfo("Place task $id at agent $agentId")
-
-        input.values.filterIsInstance<EventOnGuardSlot>()
-             .forEach { payload.set<ObjectNode>(it.id, it.data?.payload) }
-
-        //TODO add taskId and retry counter to task path and id
-        val task = AgentTask(
-                id = UUID.randomUUID().toString(),
-                type = def.taskType,
-                payload = payload,
-                successEventPath = successEventPath,
-                retryEventPath = retryEventPath,
-                failureEventPath = failureEventPath
-        )
-
-        processCtx.nodeManager().platform
-            .put(
-                LososPlatform.agentTaskPath(agentId, task.id),
-                processCtx.nodeManager().platform.object2json(task)
-            )
+//        val id = UUID.randomUUID().toString()
+//        val payload: ObjectNode = TestUtils.jsonMapper.createObjectNode()
+//        logInfo("Place task $id at agent $agentId")
+//
+//        input.values.filterIsInstance<EventOnGuardSlot>()
+//             .forEach { payload.set<ObjectNode>(it.id, it.data?.payload) }
+//
+//        //TODO add taskId and retry counter to task path and id
+//        val task = AgentTask(
+//                id = UUID.randomUUID().toString(),
+//                type = def.taskType,
+//                payload = payload,
+//                successEventPath = successEventPath,
+//                retryEventPath = retryEventPath,
+//                failureEventPath = failureEventPath
+//        )
+//
+//        processCtx.nodeManager().platform
+//            .put(
+//                LososPlatform.agentTaskPath(agentId, task.id),
+//                processCtx.nodeManager().platform.object2json(task)
+//            )
     }
 
 }

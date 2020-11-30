@@ -13,7 +13,7 @@ import io.losos.process.engine.VarSlotDef
 enum class GuardType { AND, OR }
 enum class GuardState { NEW, WAITING, OPENED, CANCELLED, TIMEOUT }
 enum class GuardRelationType { XOR, OR }
-
+enum class GuardSignature { SINGLE, ARRAY, MAP }
 
 data class GuardRelation (
         val type: GuardRelationType,
@@ -71,6 +71,7 @@ data class GuardDef(
         val slots: Map<String, SlotDef>,
         val action: String?,
         val type: GuardType = GuardType.AND,
+        val signature: GuardSignature = GuardSignature.SINGLE,
         val timeout: Long = -1,
         val timeoutAction: String? = null
 )
