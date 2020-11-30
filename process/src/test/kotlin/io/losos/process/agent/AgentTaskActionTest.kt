@@ -44,7 +44,8 @@ class AgentTaskActionTest: LososTest() {
 
     private val logger = LoggerFactory.getLogger(AgentTaskActionTest::class.java)
 
-    @Test fun directScheduleSuccess() = withProcessManagerEtcdEB { eventBus, pm ->
+//    @Test
+    fun directScheduleSuccess() = withProcessManagerEtcdEB { eventBus, pm ->
 
         val ganDef = TestUtils
                 .jsonMapper
@@ -78,7 +79,8 @@ class AgentTaskActionTest: LososTest() {
         logger.info("done")
     }
 
-    @Test fun testOneTimeoutDirectSchedule() {
+//    @Test
+    fun testOneTimeoutDirectSchedule() {
 
     }
 

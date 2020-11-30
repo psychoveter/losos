@@ -26,7 +26,7 @@ class ProcessManager (
 
     private val processes     = ConcurrentHashMap<String, Process>()
     private val subscriptions = ConcurrentHashMap<String, MutableList<Subscription<ObjectNode>>>()
-    private val slots         = ConcurrentHashMap<String, MutableList<EventSlot>>()
+    private val slots         = ConcurrentHashMap<String, MutableList<EventSlot<*>>>()
 
     private val busChannel = Channel<Event<ObjectNode>>()
 
@@ -99,7 +99,7 @@ class ProcessManager (
 
     fun startBrokering() {
         nodeManager.platform.subscribe(KeyConvention.keyProcessRegistry(nodeManager.name), ProcessStartCall::class.java) {
-            logger.info("Got ProcessStartCall notification: ${it.fullPath}")
+            logger.info("Got ProcessStartCall notification: ${it}")
             val call = it.payload!!
             val def = nodeManager.processLibrary.getAvailableProcesses()[call.procName]
             if (def == null) {
@@ -216,9 +216,9 @@ class ProcessManager (
             return guards.filter { relatedGuardIds.contains(it.def.id) }
         }
 
-        override fun registerSlot(s: EventSlot) = slots[pid]!!.add(s)
+        override fun registerSlot(s: EventSlot<*>) = slots[pid]!!.add(s)
 
-        override fun deregisterSlot(s: EventSlot) = slots[pid]!!.remove(s)
+        override fun deregisterSlot(s: EventSlot<*>) = slots[pid]!!.remove(s)
 
     }
 }

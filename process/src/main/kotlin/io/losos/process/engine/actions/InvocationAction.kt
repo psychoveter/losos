@@ -39,24 +39,34 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
 
     companion object {
         const val GUARD_RESULT = "guard_result"
-        val SLOT_INPUT = SlotId.eventOnGuardId("???")
+        val SLOT_INPUT = SlotId.eventOnGuardId("guard")
     }
 
     override suspend fun action(input: ActionInput) {
         //1. Rise guards
         val resultGuard = guard(def.guardResult) { addEventSlots() }
         val resultEventPath = resultGuard.eventGuardSlot()!!.eventPath()
+        when (input) {
+            is ActionInputSingle<*> -> actionForSingleInput(input as ActionInputSingle<ObjectNode>, resultEventPath)
+            is ActionInputList<*> -> throw NotImplementedError()
+            is ActionInputMap -> throw NotImplementedError()
+        }
+
+    }
+
+    private fun actionForSingleInput(input: ActionInputSingle<ObjectNode>, resultEventPath: String) {
+        val payload = input.data!!
+
         when (def.invoke_type) {
             InvocationType.ASYNC -> {
-                throw RuntimeException("Not implemented")
+                throw NotImplementedError()
             }
 
             InvocationType.SERVICE -> {
                 if (ctx.nodeManager().serviceActionManager != null) {
                     val config = ctx.platform().json2object(def.config, ServiceActionConfig::class.java)
-                    val args = input.data(SLOT_INPUT, ObjectNode::class.java) ?: ctx.platform().emptyObject()
                     ctx.nodeManager().serviceActionManager!!.invokeService(
-                        ServiceTask(config.workerType, config.taskType, args),
+                        ServiceTask(config.workerType, config.taskType, payload),
                         resultEventPath
                     )
                 } else {
@@ -66,11 +76,10 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
 
             InvocationType.SERVICE_STUB -> {
                 val config = ctx.platform().json2object(def.config, ServiceActionStubConfig::class.java)
-                val args = input.data(SLOT_INPUT, ObjectNode::class.java)
 
                 Thread {
                     Thread.sleep(config.delay)
-                    logger.info("[STUB_SERVICE]: args = ${args}")
+                    logger.info("[STUB_SERVICE]: args = $payload")
                     ctx.platform().put(resultEventPath, InvocationResult(
                         if (config.fail) InvocationExitCode.FAILED else InvocationExitCode.OK,
                         ctx.platform().emptyObject()
@@ -84,7 +93,7 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
                 val result = ctx.nodeManager().subprocessPlanner.assignSubprocess(
                     config.processName,
                     resultEventPath,
-                    config.args
+                    payload
                 )
                 if (result != null) {
                     logger.info("Scheduled ${config.processName} at node ${result.node} with pid ${result.pid}")

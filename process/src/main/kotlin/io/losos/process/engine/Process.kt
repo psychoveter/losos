@@ -39,8 +39,8 @@ interface ProcessContext {
     fun guard(def: GuardDef, block: Guard.() -> Unit): Guard
 
     //--methods-for-GAN-------------------------------------------------------------------------------------------------
-    fun registerSlot(s: EventSlot): Boolean
-    fun deregisterSlot(s: EventSlot): Boolean
+    fun registerSlot(s: EventSlot<*>): Boolean
+    fun deregisterSlot(s: EventSlot<*>): Boolean
     fun filterXorGuards(guardId: String, guards: List<Guard>): List<Guard>
 }
 
@@ -84,7 +84,7 @@ data class CmdAction(val action: Action<*>, val firedGuard: Guard): CmdGAN
 
 data class InvocationResult (
     val exitCode: InvocationExitCode,
-    val data: ObjectNode
+    val data: ObjectNode? = null
 )
 
 enum class InvocationExitCode {
@@ -183,83 +183,95 @@ class Process(
      */
     override suspend fun process(message: CmdGAN) {
         logger.info("Received event ${message}")
-        when (message) {
-            is CmdGuardRegister -> {
-                message.guard.state = GuardState.WAITING
+        try {
+            when (message) {
+                is CmdGuardRegister -> {
+                    message.guard.state = GuardState.WAITING
 
-                logger.info("add new guard: ${message.guard}")
-                activeGuards.add(message.guard)
+                    logger.info("add new guard: ${message.guard}")
+                    activeGuards.add(message.guard)
 
-                if(message.guard.canBeOpened())
-                    openGuard(message.guard)
-                else
-                    message.guard.getEventSlots()
+                    if(message.guard.canBeOpened())
+                        openGuard(message.guard)
+                    else
+                        message.guard.getEventSlots()
                             .forEach { context.registerSlot(it) }
 
-                publishGuard(message.guard)
-            }
-            is CmdGuardOpen -> {
-                message.guard.state = GuardState.OPENED
-                handleRelatedGuards(message.guard)
-                handleGuardOpen(message.guard, message.guard.action)
-                if(message.guard.def.id == def.finishGuard) {
-                    logger.info("Finish guard ${message.guard.def.id} opened: exit process")
+                    publishGuard(message.guard)
+                }
+                is CmdGuardOpen -> {
+                    message.guard.state = GuardState.OPENED
+                    handleRelatedGuards(message.guard)
+                    handleGuardOpen(message.guard, message.guard.action)
+                    if(message.guard.def.id == def.finishGuard) {
+                        logger.info("Finish guard ${message.guard.def.id} opened: exit process")
 
-                    if (resultEventPath != null) {
-                        context.platform().put(
-                            resultEventPath,
-                            InvocationResult (
-                                InvocationExitCode.OK,
-                                message.guard.slotJson()
+                        if (resultEventPath != null) {
+                            context.platform().put(
+                                resultEventPath,
+                                InvocationResult (
+                                    InvocationExitCode.OK,
+                                    message.guard.slotJson()
+                                )
                             )
+                        }
 
-                        )
+                        close()
                     }
-
-                    close()
+                    publishGuard(message.guard)
                 }
-                publishGuard(message.guard)
-            }
-            is CmdGuardTimeout -> {
-                logger.info("Guard timeout happens: ${message.guard.def.id}")
-                if(message.guard.timeoutAction == null)
-                    throw RuntimeException("Timeout guard has no timeout action")
-                message.guard.state = GuardState.TIMEOUT
-                handleRelatedGuards(message.guard)
-                handleGuardOpen(message.guard, message.guard.timeoutAction)
-                publishGuard(message.guard)
-            }
-            is CmdGuardCancel -> {
-                logger.info("Remove cancelled guard: ${message.guard.def.id}")
-                message.guard.state = GuardState.CANCELLED
-                message.guard.cancelledBy = message.by
-                removeGuard(message.guard)
-            }
-            is CmdWork -> {
-                try {
-                    message.block(this)
-                } catch (e: Exception) {
-                    throw WorkException(e)
+                is CmdGuardTimeout -> {
+                    logger.info("Guard timeout happens: ${message.guard.def.id}")
+                    if(message.guard.timeoutAction == null)
+                        throw RuntimeException("Timeout guard has no timeout action")
+                    message.guard.state = GuardState.TIMEOUT
+                    handleRelatedGuards(message.guard)
+                    handleGuardOpen(message.guard, message.guard.timeoutAction)
+                    publishGuard(message.guard)
                 }
-            }
-            is CmdAction -> {
-                publishAction(message.action, message.firedGuard)
-                val cmds = try {
-                    message.action.execute(ActionInput(message.firedGuard.slots, context.platform()))
-                } catch (e: Exception) {
-                    throw GANException(e)
+                is CmdGuardCancel -> {
+                    logger.info("Remove cancelled guard: ${message.guard.def.id}")
+                    message.guard.state = GuardState.CANCELLED
+                    message.guard.cancelledBy = message.by
+                    removeGuard(message.guard)
                 }
-                cmds.forEach{send(it)}
-            }
-            is CmdEvent -> {
-                activeGuards
+                is CmdWork -> {
+                    try {
+                        message.block(this)
+                    } catch (e: Exception) {
+                        throw WorkException(e)
+                    }
+                }
+                is CmdAction -> {
+                    publishAction(message.action, message.firedGuard)
+                    val cmds = try {
+                        val input = message.firedGuard.toActionInput()
+                        message.action.execute(input)
+                    } catch (e: Exception) {
+                        throw GANException(e)
+                    }
+                    cmds.forEach{send(it)}
+                }
+                is CmdEvent -> {
+                    activeGuards
                         .filter { it.accept(message.event) }
                         .filter { it.canBeOpened() }
                         .forEach{ openGuard(it) }
-            }
+                }
 
-            else -> { throw RuntimeException("Unknown command type") }
+                else -> { throw RuntimeException("Unknown command type") }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed process execution", e)
+            if (resultEventPath != null)
+                context.platform().put(resultEventPath,
+                    InvocationResult(
+                        InvocationExitCode.FAILED,
+                        context.platform().emptyObject().put("reason", e.message)
+                    ))
+            this.close()
         }
+
     }
 
     private suspend fun handleRelatedGuards(guard: Guard) {
