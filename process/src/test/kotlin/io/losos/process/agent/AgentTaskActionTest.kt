@@ -4,14 +4,12 @@ import io.etcd.recipes.common.connectToEtcd
 import io.losos.TestUtils
 import io.losos.common.StringADescriptor
 import io.losos.platform.etcd.EtcdLososPlatform
-import io.losos.platform.Event
 import io.losos.platform.LososPlatform
 import io.losos.executor.KotlinTaskExecutor
 import io.losos.process.engine.NodeManager
 import io.losos.process.engine.ProcessManager
 import io.losos.process.library.EtcdProcessLibrary
-import io.losos.process.model.ProcessDef
-import org.junit.Test
+import io.losos.common.ProcessDef
 import org.slf4j.LoggerFactory
 import java.io.File
 

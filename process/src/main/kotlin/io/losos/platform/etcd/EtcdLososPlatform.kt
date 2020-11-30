@@ -10,7 +10,6 @@ import io.losos.platform.Subscription
 import io.etcd.jetcd.Client
 import io.etcd.jetcd.KeyValue
 import io.etcd.jetcd.Watch
-import io.etcd.jetcd.kv.GetResponse
 import io.etcd.jetcd.options.GetOption
 import io.etcd.jetcd.options.WatchOption
 import io.etcd.jetcd.watch.WatchEvent
@@ -19,10 +18,8 @@ import io.etcd.recipes.common.putValueWithKeepAlive
 import io.etcd.recipes.common.watcher
 import io.losos.common.AgentDescriptor
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.collections.HashMap

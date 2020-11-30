@@ -2,13 +2,8 @@ package io.losos.process.engine.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.TestUtils
-import io.losos.platform.Event
-import io.losos.platform.LososPlatform
-import io.losos.common.AgentTask
 import io.losos.process.engine.*
-import io.losos.process.model.ActionDef
-import java.util.*
+import io.losos.common.ActionDef
 
 class AgentTaskAction(
         def: AgentTaskActionDef,

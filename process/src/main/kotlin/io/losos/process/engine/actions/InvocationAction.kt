@@ -2,11 +2,11 @@ package io.losos.process.engine.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.process.engine.InvocationExitCode
-import io.losos.process.engine.InvocationResult
 import io.losos.process.engine.ProcessContext
 import io.losos.process.engine.SlotId
-import io.losos.process.model.ActionDef
+import io.losos.common.ActionDef
+import io.losos.common.InvocationExitCode
+import io.losos.common.InvocationResult
 import io.losos.process.planner.ServiceTask
 import org.slf4j.LoggerFactory
 import java.lang.RuntimeException
@@ -84,7 +84,8 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
                         if (config.fail) InvocationExitCode.FAILED else InvocationExitCode.OK,
                         ctx.platform().emptyObject()
                             .put("key", "value")
-                    ))
+                    )
+                    )
                 }.start()
             }
 

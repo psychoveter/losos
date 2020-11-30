@@ -11,7 +11,7 @@
       "slots": {
         "guard": {
           "name": "guard",
-          "type": "event_on_guard"
+          "type": "invocation"
         }
       },
       "action": "action_call"
@@ -21,7 +21,7 @@
       "slots": {
         "guard": {
           "name": "guard",
-          "type": "event_on_guard"
+          "type": "invocation"
         }
       },
       "action": "action_success"

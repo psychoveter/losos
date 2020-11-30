@@ -11,7 +11,7 @@
       "slots": {
         "guard": {
           "name": "guard",
-          "type": "event_on_guard"
+          "type": "invocation"
         }
       },
       "action": "action_study_download"
@@ -21,7 +21,7 @@
       "slots": {
         "guard": {
           "name": "guard",
-          "type": "event_on_guard"
+          "type": "invocation"
         }
       },
       "action": "action_ml"
@@ -31,7 +31,7 @@
       "slots": {
         "guard": {
           "name": "guard",
-          "type": "event_on_guard"
+          "type": "invocation"
         }
       },
       "action": "action_report"
@@ -41,7 +41,7 @@
       "slots": {
         "guard": {
           "name": "guard",
-          "type": "event_on_guard"
+          "type": "invocation"
         }
       },
       "action": "action_report_upload"
@@ -51,7 +51,7 @@
       "slots": {
         "guard": {
           "name": "guard",
-          "type": "event_on_guard"
+          "type": "invocation"
         }
       },
       "action": null

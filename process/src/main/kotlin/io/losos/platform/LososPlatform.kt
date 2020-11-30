@@ -4,13 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TreeTraversingParser
 import io.etcd.jetcd.ByteSequence
+import io.losos.KeyConvention
+import io.losos.common.*
 import java.nio.charset.Charset
-import io.losos.common.AgentDescriptor
+import java.lang.IllegalArgumentException
 
 interface Subscription<T> {
     val id: String
     val prefix: String
-    val callback: suspend (Event<T>) -> Unit
+    val callback: suspend (Event) -> Unit
     fun cancel(): Unit
 }
 
@@ -27,10 +29,10 @@ interface LososPlatform {
         val PREFIX_TASKS       = "/tasks"
         val PREFIX_TASKS_STATE = "/state_tasks"
 
-        fun agentTasksPath(agentName: String)                      = "${PREFIX_TASKS}/$agentName"
-        fun agentTaskPath(agentName: String, taskId: String)       = "${PREFIX_TASKS}/$agentName/${taskId}"
-        fun agentTaskStatePath(taskId: String)                     = "${PREFIX_TASKS_STATE}/${taskId}"
-        fun agentLeasePath(agentName: String)                      = "${PREFIX_AGENT_LEASE}/$agentName"
+        fun agentTasksPath(agentName: String)                      = "$PREFIX_TASKS/$agentName"
+        fun agentTaskPath(agentName: String, taskId: String)       = "$PREFIX_TASKS/$agentName/${taskId}"
+        fun agentTaskStatePath(taskId: String)                     = "$PREFIX_TASKS_STATE/${taskId}"
+        fun agentLeasePath(agentName: String)                      = "$PREFIX_AGENT_LEASE/$agentName"
 
 
         //--serialization-utils-----------------------------------------------------------------------------------------
@@ -43,20 +45,20 @@ interface LososPlatform {
     /**
      * Return all events stored for this prefix by their revision
      */
-    fun history(prefix: String): List<Event<*>>
+    fun history(prefix: String): List<Event>
 
-    fun subscribe(prefix: String, callback: suspend (e: Event<ObjectNode>) -> Unit) =
+    fun subscribe(prefix: String, callback: suspend (e: Event) -> Unit) =
         subscribe(prefix, com.fasterxml.jackson.databind.node.ObjectNode::class.java, callback)
 
-    fun <T> subscribe(prefix: String, clazz: Class<T>, callback: suspend (e: Event<T>) -> Unit): Subscription<T>
+    fun <T> subscribe(prefix: String, clazz: Class<T>, callback: suspend (e: Event) -> Unit): Subscription<T>
 
-    fun <T> subscribeDelete(path: String, clazz: Class<T>, callback: suspend (e: Event<T>) -> Unit): Subscription<T>
-    fun subscribeDelete(path: String, callback: suspend (e: Event<ObjectNode>) -> Unit) =
+    fun <T> subscribeDelete(path: String, clazz: Class<T>, callback: suspend (e: Event) -> Unit): Subscription<T>
+    fun subscribeDelete(path: String, callback: suspend (e: Event) -> Unit) =
         subscribeDelete(path, ObjectNode::class.java, callback)
 
     fun put(path: String, payload: Any)
 
-    fun put(e: Event<*>)
+    fun put(e: Event)
 
     fun delete(path: String)
 
@@ -77,7 +79,6 @@ interface LososPlatform {
 
 
     //--process-methods-------------------------------------------------------------------------------------------------
-
 
 
     //--agent-menthods--------------------------------------------------------------------------------------------------
@@ -120,5 +121,44 @@ interface LososPlatform {
 
     fun bytes2string(bytes: ByteSequence): String = bytes.toString(Charset.forName("UTF-8"))
 
+
+    //--event-restoration-----------------------------------------------------------------------------------------------
+
+    /**
+     * Parses input event based on it's path structure.
+     * @see io.losos.KeyConvention
+     */
+    fun restoreEvent(path: String, data: ByteSequence): Event {
+        val tokens = path.split("/")
+        if (tokens.size < 1)
+            throw IllegalArgumentException("Unexpected key: $path")
+
+        val event = when (tokens[1]) {
+            "node" -> when(tokens[2]) {
+                "registry" -> NodeEvent(path, bytes2object(data, NodeInfo::class.java), node = tokens[3])
+                "library" -> LibraryEntryEvent(path, bytes2object(data, ProcessDef::class.java), tokens[3])
+                "lease" -> NodeEvent(path, bytes2object(data, NodeInfo::class.java), node = tokens[3])
+                else -> null
+            }
+
+            "proc" -> when(tokens[3]) {
+                "registry" -> ProcessEvent(path, bytes2object(data, ProcessInfo::class.java), tokens[2], tokens[4])
+                "state" -> when (tokens[5]) {
+                    "action" -> ActionEntryEvent(path, tokens[2], tokens[4], tokens[6])
+                    "guard" -> GuardEntryEvent(path, bytes2json(data), tokens[2], tokens[4], tokens[6])
+                    else -> null
+                }
+                "event" -> when(tokens[7]) {
+                    "invoke" -> InvocationEvent(path, bytes2object(data, InvocationResult::class.java),
+                        tokens[2], tokens[4], tokens[6])
+                    else -> null
+                }
+                else -> null
+            }
+            else -> null
+        }
+
+        return event ?: throw IllegalArgumentException("Unexpected event path: $path")
+    }
 
 }

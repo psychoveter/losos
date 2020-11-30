@@ -1,26 +1,41 @@
 package io.losos.process.engine.actions
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.platform.LososPlatform
-import io.losos.process.engine.Slot
-import io.losos.process.engine.SlotId
+import io.losos.common.InvocationExitCode
 
 
 /**
  * Action input accepts slots of activated guard
  */
 
-interface ActionInput {
+open class ActionInput(
+    val result: InvocationExitCode = InvocationExitCode.OK,
+    val reason: ObjectNode? = null
+) {
 
 }
 
-class ActionInputSingle<T>(val data: T?): ActionInput {
+class ActionInputSingle<T>(
+    val data: T?,
+    result: InvocationExitCode = InvocationExitCode.OK,
+    reason: ObjectNode? = null
+): ActionInput(result, reason) {
     override fun toString() = "SingleInput: $data"
 }
-class ActionInputList<T>(val data: List<T?>): ActionInput {
+
+class ActionInputList<T>(
+    val data: List<T?>,
+    result: InvocationExitCode = InvocationExitCode.OK,
+    reason: ObjectNode? = null
+): ActionInput(result, reason) {
     override fun toString() = "ListInput: [${data.map { it.toString() }.joinToString(separator = ",")}]"
 }
-class ActionInputMap(val data: Map<String, Any?>): ActionInput {
+
+class ActionInputMap(
+    val data: Map<String, Any?>,
+    result: InvocationExitCode = InvocationExitCode.OK,
+    reason: ObjectNode? = null
+): ActionInput(result, reason) {
     operator fun get(key: String) = data[key]
     override fun toString() = "MapInput: $data"
 }

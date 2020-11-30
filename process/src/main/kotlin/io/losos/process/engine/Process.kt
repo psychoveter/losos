@@ -1,13 +1,14 @@
 package io.losos.process.engine
 
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.common.InvocationExitCode
+import io.losos.common.InvocationResult
 import io.losos.platform.Event
 import io.losos.actor.Actor
+import io.losos.common.*
 import io.losos.process.engine.actions.Action
-import io.losos.process.engine.actions.ActionInput
 import io.losos.process.engine.exc.GANException
 import io.losos.process.engine.exc.WorkException
-import io.losos.process.model.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -19,9 +20,11 @@ interface ProcessContext {
 
     //--general-methods-------------------------------------------------------------------------------------------------
 
+    val pid: String
+    val def: ProcessDef
+
     fun nodeManager(): NodeManager
     fun platform() = nodeManager().platform
-    fun definition(): ProcessDef
     fun pathState(): String
     fun pathRegistry(): String
 
@@ -29,10 +32,10 @@ interface ProcessContext {
 
     fun action(id: String): Action<*>
     fun action(def: ActionDef): Action<*>
-    fun guard(id: String): Guard = guard(definition().getGuardDef(id)!!)
+    fun guard(id: String): Guard = guard(def.getGuardDef(id)!!)
     fun guard(def: GuardDef): Guard = guard(def) {
         def.slots.values
-                .filterIsInstance<EventOnGuardSlotDef>()
+                .filterIsInstance<InvocationSlotDef>()
                 .forEach { slot(SlotId.eventOnGuardId(it.name)) }
     }
     fun guard(id: String, block: Guard.() -> Unit): Guard
@@ -45,19 +48,6 @@ interface ProcessContext {
 }
 
 
-data class GuardEvent(
-        override val fullPath: String,
-        override val payload: ObjectNode,
-        val newState: GuardState
-): Event<ObjectNode>
-
-data class ActionEvent(
-    override val fullPath: String,
-    override val payload: ObjectNode,
-    val action: Action<*>,
-    val firedGuard: Guard
-): Event<ObjectNode>
-
 data class ProcessStartCall (
     val pid: String,
     val procName: String,
@@ -66,30 +56,17 @@ data class ProcessStartCall (
 )
 
 
-data class ProcessInfo(
-    val pid: String,
-    val def: ProcessDef
-)
-
-
 interface CmdGAN
 data class CmdGuardRegister(val guard: Guard): CmdGAN
 data class CmdGuardOpen(val guard: Guard): CmdGAN
 data class CmdGuardTimeout(val guard: Guard): CmdGAN
 data class CmdGuardCancel(val guard: Guard, val by: Guard): CmdGAN
-data class CmdEvent(val event: Event<ObjectNode>): CmdGAN
+data class CmdEvent(val event: Event): CmdGAN
+data class CmdHalt(val reason: InvocationResult): CmdGAN
 data class CmdWork(val block: Process.() -> Unit): CmdGAN
 data class CmdAction(val action: Action<*>, val firedGuard: Guard): CmdGAN
 
 
-data class InvocationResult (
-    val exitCode: InvocationExitCode,
-    val data: ObjectNode? = null
-)
-
-enum class InvocationExitCode {
-    OK, FAILED
-}
 
 /**
  * Guard-action network
@@ -103,8 +80,11 @@ class Process(
 
     private val logger = LoggerFactory.getLogger(Process::class.java)
     private var activeGuards = ArrayList<Guard>()
-    lateinit var startGuard: Guard
+    lateinit var guardStart: Guard
         private set
+    lateinit var guardEnd: Guard
+        private set
+
     private fun removeGuard(g: Guard) {
         logger.info("remove existing guard: $g")
         g.getEventSlots().forEach { context.deregisterSlot(it) }
@@ -125,8 +105,10 @@ class Process(
             }
         }
 
-        startGuard = context.guard(def.getGuardDef(def.startGuard)!!)
-        registerGuard(startGuard)
+        guardStart = context.guard(def.getGuardDef(def.startGuard)!!)
+        registerGuard(guardStart)
+        guardEnd = context.guard(def.getGuardDef(def.startGuard)!!)
+        registerGuard(guardEnd)
 
         //TODO: publish process state
     }
@@ -142,7 +124,7 @@ class Process(
         return ProcessInfo(pid, def)
     }
 
-    fun hasStartingEventGuard(): Boolean = startGuard[Guard.SLOT_EVENT_GUARD] != null
+    fun hasStartingEventGuard(): Boolean = guardStart[Guard.SLOT_EVENT_GUARD] != null
 
     //--Command-factory-------------------------------------------------------------------------------------------------
 
@@ -186,6 +168,10 @@ class Process(
         try {
             when (message) {
                 is CmdGuardRegister -> {
+                    if (this::guardEnd.isInitialized && message.guard.def.id == guardEnd.def.id) {
+                        logger.debug("Skip emitting end guard")
+                    }
+
                     message.guard.state = GuardState.WAITING
 
                     logger.info("add new guard: ${message.guard}")
@@ -209,7 +195,7 @@ class Process(
                         if (resultEventPath != null) {
                             context.platform().put(
                                 resultEventPath,
-                                InvocationResult (
+                                InvocationResult(
                                     InvocationExitCode.OK,
                                     message.guard.slotJson()
                                 )
@@ -258,6 +244,9 @@ class Process(
                         .filter { it.canBeOpened() }
                         .forEach{ openGuard(it) }
                 }
+                is CmdHalt -> {
+                    halt(message.reason)
+                }
 
                 else -> { throw RuntimeException("Unknown command type") }
             }
@@ -268,7 +257,8 @@ class Process(
                     InvocationResult(
                         InvocationExitCode.FAILED,
                         context.platform().emptyObject().put("reason", e.message)
-                    ))
+                    )
+                )
             this.close()
         }
 
@@ -295,26 +285,28 @@ class Process(
 
     private fun publishGuard(guard: Guard) {
         if (def.publishGuardEvents) {
-            val guardEvent = GuardEvent(
-                    fullPath = "${context.pathState()}/guard/${guard.def.id}/${guard.incarnation}",
-                    payload = guard.stateJson(),
-                    newState = guard.state
-            )
-            context.platform().put(guardEvent)
+            val path = guard.path()
+            val payload = guard.stateJson()
+            context.platform().put(path, payload)
         }
     }
 
     private fun publishAction(action: Action<*>, firedGuard: Guard) {
         if(def.publishGuardEvents) {
-            val evt = ActionEvent(
-                    action.path(),
-                    context.platform().emptyObject(),
-                    action,
-                    firedGuard
-            )
-            context.platform().put(evt)
+            val path = action.path()
+            val payload = context.platform().emptyObject()
+            context.platform().put(path, payload)
         }
     }
 
+    private fun halt(reason: InvocationResult) {
+        logger.info("End guard ${guardEnd} opened: exit process")
+
+        if (resultEventPath != null) {
+            context.platform().put(resultEventPath, reason)
+        }
+
+        close()
+    }
 
 }

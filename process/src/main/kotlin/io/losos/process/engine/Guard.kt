@@ -2,12 +2,13 @@ package io.losos.process.engine
 
 
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.KeyConvention
 import io.losos.platform.Event
 import io.losos.process.engine.actions.*
-import io.losos.process.model.GuardDef
-import io.losos.process.model.GuardSignature
-import io.losos.process.model.GuardState
-import io.losos.process.model.GuardType
+import io.losos.common.GuardDef
+import io.losos.common.GuardSignature
+import io.losos.common.GuardState
+import io.losos.common.GuardType
 import org.slf4j.LoggerFactory
 import java.lang.IllegalStateException
 import java.lang.RuntimeException
@@ -62,7 +63,7 @@ class Guard(
         internal set
 
     internal fun accept(e: Event<ObjectNode>): Boolean = slots.values
-            .filterIsInstance<EventOnGuardSlot<ObjectNode>>()
+            .filterIsInstance<EventSlot<ObjectNode>>()
             .filter { it.isEmpty() }
             .map { it.accept(e) }
             .fold(false) { a, b -> a || b }
@@ -90,13 +91,13 @@ class Guard(
 
 
     fun allSlotsFilled(): Boolean = slots.values
-            .filterIsInstance<EventOnGuardSlot<ObjectNode>>()
+            .filterIsInstance<EventSlot<ObjectNode>>()
             .map { !it.isEmpty() }
             .fold(true) { a,b -> a && b }
 
     fun anySlotFilled(): Boolean = if (slots.isEmpty()) true
     else slots.values
-            .filterIsInstance<EventOnGuardSlot<ObjectNode>>()
+            .filterIsInstance<EventSlot<ObjectNode>>()
             .map { !it.isEmpty() }
             .fold(false) { a,b -> a || b }
 
@@ -109,35 +110,35 @@ class Guard(
     @Suppress("UNCHECKED_CAST")
     operator fun <T: Slot<*>> get(id: SlotId<T>): T? = slots[id.name] as? T
 
-    fun path(): String = "${context.pathState()}/guard/${def.id}/1"
+    fun path(): String = KeyConvention.keyGuard(context.nodeManager().name, context.pid, def.id)
 
     fun eventGuardSlot() = get(SLOT_EVENT_GUARD)
 
     //--creation--------------------------------------------------------------------------------------------------------
 
     fun addEventSlots(): Unit = def.slots.values
-                .filterIsInstance<EventOnGuardSlotDef>()
-                .forEach { eventOnGuardSlot(it.name) }
+                .filterIsInstance<InvocationSlotDef>()
+                .forEach { invocationSlot(it.name) }
 
 
     @Suppress("UNCHECKED_CAST")
     fun <T: Slot<*>> slot(slotId: SlotId<T>, block: T.() -> Unit = {}): T {
         val slot: Slot<*> = when(slotId.clazz) {
             VarSlot::class -> varSlot(slotId.name, block as VarSlot<Any?>.() -> Unit)
-            EventCustomSlot::class -> eventCustomSlot(slotId.name)
-            EventOnGuardSlot::class -> eventOnGuardSlot(slotId.name)
+            EventCustomSlot::class -> eventSlot(slotId.name)
+            InvocationSlot::class -> invocationSlot(slotId.name)
             else -> throw RuntimeException("Unsupported slot type")
         }
         slots[slot.id] = slot
         return slot as T
     }
 
-    private fun eventOnGuardSlot(name: String): EventOnGuardSlot<ObjectNode> {
-        val slotDef: EventOnGuardSlotDef = def.slots[name] as EventOnGuardSlotDef
-        return EventOnGuardSlot(slotDef.name, this)
+    private fun invocationSlot(name: String): InvocationSlot {
+        val slotDef: InvocationSlotDef = def.slots[name] as InvocationSlotDef
+        return InvocationSlot(slotDef.name, this)
     }
 
-    private fun eventCustomSlot(name: String): EventCustomSlot<ObjectNode> {
+    private fun eventSlot(name: String): EventCustomSlot<ObjectNode> {
         val slotDef: EventCustomSlotDef = def.slots[name] as EventCustomSlotDef
         val selectorDef = slotDef.selector
         val selector = when(selectorDef) {

@@ -1,4 +1,4 @@
-package io.losos.actor
+package io.losos.process
 
 import org.junit.Test
 

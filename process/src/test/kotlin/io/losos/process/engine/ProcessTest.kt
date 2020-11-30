@@ -1,12 +1,11 @@
 package io.losos.process.engine
 
 import io.losos.platform.etcd.EtcdLososPlatform
-import io.losos.platform.Event
-import io.losos.process.model.ProcessDef
+import io.losos.common.ProcessDef
 import io.etcd.recipes.common.connectToEtcd
 import io.losos.TestUtils
 import io.losos.process.library.EtcdProcessLibrary
-import io.losos.process.model.GuardState
+import io.losos.common.GuardState
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.io.File

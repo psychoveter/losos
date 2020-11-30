@@ -1,11 +1,16 @@
 package io.losos.process.engine
 
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.common.InvocationExitCode
+import io.losos.common.InvocationResult
 import io.losos.KeyConvention
+import io.losos.common.ActionDef
+import io.losos.common.GuardDef
+import io.losos.common.GuardRelationType
+import io.losos.common.ProcessDef
 import io.losos.platform.Event
 import io.losos.platform.Subscription
 import io.losos.process.engine.actions.*
-import io.losos.process.model.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -47,6 +52,8 @@ class ProcessManager (
         val context = ProcessContext(pid, def)
         val process = Process(pid, def, context, resultEventPath)
         processes[pid] = process
+
+        // Subscribe for process events
         subscriptions[pid]!!.add(nodeManager.platform.subscribe(context.pathState()) {
             busChannel.send(it)
         })
@@ -61,7 +68,7 @@ class ProcessManager (
 
         //if args are provided and process is guarded by solo event guard, then kick off it
         if (args != null && process.hasStartingEventGuard())
-            nodeManager.platform.put(process.startGuard.eventGuardSlot()!!.eventPath(), args)
+            nodeManager.platform.put(process.guardStart.eventGuardSlot()!!.eventPath(), args)
 
         return process
     }
@@ -69,12 +76,7 @@ class ProcessManager (
     /**
      * Restores process from history events at the point it was terminated
      */
-    fun restoreProcess(
-        pid: String,
-        def: ProcessDef,
-        resultEventPath: String? = null,
-        args: ObjectNode? = null
-    ): Process {
+    fun restoreProcess(pid: String, def: ProcessDef, resultEventPath: String? = null, args: ObjectNode? = null): Process {
         //TODO("Restore should take into account finished actions and start from them if any")
         logger.info("Restore process ${pid}...")
         return if (!processes.containsKey(pid)) {
@@ -109,7 +111,7 @@ class ProcessManager (
                 if (call.resultEventPath != null) {
                     nodeManager.platform.put(
                         call.resultEventPath,
-                        InvocationResult (
+                        InvocationResult(
                             InvocationExitCode.FAILED,
                             nodeManager.platform.emptyObject()
                                 .put("reason", "Process def ${call.procName} not found")
@@ -158,12 +160,13 @@ class ProcessManager (
     }
 
 
-    inner class ProcessContext(val pid: String, val processDef: ProcessDef):
+    inner class ProcessContext(
+        override val pid: String,
+        override val def: ProcessDef
+    ):
         io.losos.process.engine.ProcessContext {
         //TODO: Def validation
         //TODO: Process creation failure processing
-
-        override fun definition(): ProcessDef = processDef
 
         override fun pathState(): String = KeyConvention.keyProcessState(nodeManager.name, pid)
         override fun pathRegistry(): String = KeyConvention.keyProcessEntry(nodeManager.name, pid)
@@ -172,7 +175,7 @@ class ProcessManager (
         override fun nodeManager(): NodeManager = nodeManager
 
 
-        override fun action(id: String): Action<*> = action(processDef.getActionDef(id)!!)
+        override fun action(id: String): Action<*> = action(def.getActionDef(id)!!)
 
         override fun action(def: ActionDef): Action<*> = when(def) {
             is TestActionDef -> TestAction(def, this)
@@ -182,21 +185,21 @@ class ProcessManager (
         }
 
         override fun guard(id: String, block: Guard.() -> Unit): Guard
-                = guard(processDef.getGuardDef(id)!!, block)
+                = guard(def.getGuardDef(id)!!, block)
 
 
-        override fun guard(def: GuardDef, block: Guard.() -> Unit): Guard {
-            val action = if(def.action == null) null
-                         else action(processDef.getActionDef(def.action)!!)
-            val timeoutAction = if(def.timeoutAction == null) null
-                                else action(processDef.getActionDef(def.timeoutAction)!!)
+        override fun guard(gdef: GuardDef, block: Guard.() -> Unit): Guard {
+            val action = if(gdef.action == null) null
+                         else action(def.getActionDef(gdef.action)!!)
+            val timeoutAction = if(gdef.timeoutAction == null) null
+                                else action(def.getActionDef(gdef.timeoutAction)!!)
 
             val g = Guard(
-                def = def,
-                type = def.type,
+                def = gdef,
+                type = gdef.type,
                 context = this,
                 action = action,
-                timeout = def.timeout,
+                timeout = gdef.timeout,
                 timeoutAction = timeoutAction
             )
 
@@ -207,7 +210,7 @@ class ProcessManager (
 
         override fun filterXorGuards(guardId: String, guards: List<Guard>): List<Guard> {
             //TODO: optimize
-            val relatedGuardIds: List<String> = processDef.guardRelations
+            val relatedGuardIds: List<String> = def.guardRelations
                     .filter { it.type == GuardRelationType.XOR }
                     .filter { it.guards.contains(guardId) }
                     .map { it.guards }

@@ -1,21 +1,18 @@
 package io.losos.process.engine.actions
 
 import io.losos.process.engine.*
-import io.losos.process.model.ActionDef
+import io.losos.common.ActionDef
 import org.slf4j.LoggerFactory
 
 abstract class AbstractAction<T: ActionDef>(
         override val def: T,
-        val ctx: ProcessContext
+        override val ctx: ProcessContext
 ): Action<T> {
 
     private val logger = LoggerFactory.getLogger(AbstractAction::class.java)
 
 
-    protected val context = ctx
     private val cmds = ArrayList<CmdGAN>()
-
-    override fun path() = "${context.pathState()}/action/${def.id}"
 
     override suspend fun execute(input: ActionInput): List<CmdGAN> {
         action(input)
@@ -23,7 +20,6 @@ abstract class AbstractAction<T: ActionDef>(
     }
 
     abstract suspend fun action(input: ActionInput)
-
 
     fun guard(guardId: String, block: Guard.() -> Unit = {}): Guard {
         val guard = ctx.guard(guardId, block)

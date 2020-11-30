@@ -1,7 +1,7 @@
 package io.losos.process.library
 
 import io.losos.platform.LososPlatform
-import io.losos.process.model.ProcessDef
+import io.losos.common.ProcessDef
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader

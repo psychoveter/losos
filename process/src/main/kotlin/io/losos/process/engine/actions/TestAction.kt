@@ -2,7 +2,7 @@ package io.losos.process.engine.actions
 
 import com.fasterxml.jackson.annotation.JsonTypeName
 import io.losos.process.engine.*
-import io.losos.process.model.ActionDef
+import io.losos.common.ActionDef
 import kotlinx.coroutines.delay
 
 

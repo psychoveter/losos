@@ -1,11 +1,10 @@
-package io.losos.platform.etcd
+package io.losos.process
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.losos.platform.Event
 import io.etcd.recipes.common.connectToEtcd
 import io.losos.TestUtils
+import io.losos.platform.etcd.EtcdLososPlatform
 import kotlinx.coroutines.*
 import org.junit.Test
 import org.slf4j.LoggerFactory

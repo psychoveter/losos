@@ -1,4 +1,4 @@
-package io.losos.executor
+package io.losos.process
 
 import io.etcd.recipes.common.connectToEtcd
 import io.losos.TestUtils
@@ -6,6 +6,7 @@ import io.losos.platform.etcd.EtcdLososPlatform
 import io.losos.platform.LososPlatform
 import io.losos.common.AgentTask
 import io.losos.common.StringADescriptor
+import io.losos.executor.KotlinTaskExecutor
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CountDownLatch

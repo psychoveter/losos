@@ -30,7 +30,8 @@ class KotlinTaskExecutor(
             descriptor: AgentDescriptor,
             block: (input: AgentTask) -> ObjectNode
         ) {
-            val executor = KotlinTaskExecutor(agentName, eventBus, descriptor, block)
+            val executor =
+                KotlinTaskExecutor(agentName, eventBus, descriptor, block)
             eventBus.runInKeepAlive("${LososPlatform.PREFIX_AGENT_LEASE}/$agentName") {
                 executor.run()
             }

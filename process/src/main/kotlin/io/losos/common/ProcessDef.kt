@@ -1,4 +1,4 @@
-package io.losos.process.model
+package io.losos.common
 
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
@@ -7,7 +7,7 @@ import io.losos.process.engine.actions.AgentTaskActionDef
 import io.losos.process.engine.actions.InvocationActionDef
 import io.losos.process.engine.actions.TestActionDef
 import io.losos.process.engine.EventCustomSlotDef
-import io.losos.process.engine.EventOnGuardSlotDef
+import io.losos.process.engine.InvocationSlotDef
 import io.losos.process.engine.VarSlotDef
 
 enum class GuardType { AND, OR }
@@ -57,8 +57,8 @@ open class ActionDef (
         property = "type"
 )
 @JsonSubTypes(
-        JsonSubTypes.Type(value = EventOnGuardSlotDef::class, name = "event_on_guard"),
-        JsonSubTypes.Type(value = EventCustomSlotDef::class, name = "event_custom"),
+        JsonSubTypes.Type(value = InvocationSlotDef::class, name = "invocation"),
+        JsonSubTypes.Type(value = EventCustomSlotDef::class, name = "event"),
         JsonSubTypes.Type(value = VarSlotDef::class, name = "var")
 )
 open class SlotDef(

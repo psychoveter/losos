@@ -1,7 +1,8 @@
 package io.losos.process.engine.actions
 
+import io.losos.KeyConvention
 import io.losos.process.engine.*
-import io.losos.process.model.ActionDef
+import io.losos.common.ActionDef
 
 
 /**
@@ -15,8 +16,10 @@ import io.losos.process.model.ActionDef
  */
 interface Action<T: ActionDef> {
     val def: T
+    val ctx: ProcessContext
+    fun path() = KeyConvention.keyAction(ctx.nodeManager().name, ctx.pid, def.id)
+
     suspend fun execute(input: ActionInput): List<CmdGAN>
-    fun path(): String
 }
 
 

@@ -66,12 +66,24 @@ object KeyConvention {
     val NODE_LEASE_ROOT = "/node/lease"
 
 
-    fun keyNodeRegistry(nodeName: String) = "$NODE_REGISTRY_ROOT/$nodeName"
-    fun keyNodeLease(nodeName: String) = "$NODE_LEASE_ROOT/$nodeName"
-    fun keyNodeLibrary(nodeName: String) = "$NODE_LIBRARY_ROOT/$nodeName"
-    fun keyProcessLibrary(nodeName: String, procName: String) = "${keyNodeLibrary(nodeName)}/$procName"
-    fun keyProcessRegistry(nodeName: String) = "/proc/$nodeName/registry"
-    fun keyProcessEntry(node: String, pid: String) = "${keyProcessRegistry(node)}/$pid"
-    fun keyProcessState(node: String, pid: String) = "/proc/$node/state/$pid"
+    fun keyNodeRegistry(node: String)                             = "/node/registry/$node"
+    fun keyNodeLease(node: String)                                = "/node/lease/$node"
+    fun keyNodeLibrary(node: String)                              = "/node/library/$node"
+    fun keyNodeLibraryEntry(node: String, proc: String)           = "/node/library/$node/$proc"
+
+    fun keyProcessRegistry(node: String)                          = "/proc/$node/registry"
+    fun keyProcessEntry(node: String, pid: String)                = "/proc/$node/registry/$pid"
+    fun keyProcessState(node: String, pid: String)                = "/proc/$node/state/$pid"
+    fun keyAction(node: String, pid: String, defId: String)       = "/proc/$node/state/$pid/action/$defId"
+    fun keyGuard(node: String, pid: String, defId: String)        = "/proc/$node/state/$pid/guard/$defId"
+
+
+    fun keyEventOfNode(node: String)                              = "/proc/$node/event/"
+
+    fun keyInvocationEvent(
+        node: String,
+        pid: String, defId: String, e: String)                    = "/proc/$node/event/$pid/guard/$defId/invoke/$e"
+
 
 }
+

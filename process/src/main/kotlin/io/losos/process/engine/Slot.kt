@@ -1,9 +1,9 @@
 package io.losos.process.engine
 
 import com.fasterxml.jackson.annotation.JsonTypeName
-import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.common.InvocationResult
 import io.losos.platform.Event
-import io.losos.process.model.SlotDef
+import io.losos.common.SlotDef
 import java.lang.IllegalStateException
 import kotlin.reflect.KClass
 
@@ -15,7 +15,7 @@ data class SlotId<T: Slot<*>>(val name: String, val clazz: KClass<T>) {
         /**
          * Default name of the event on guard is "guard"
          */
-        fun eventOnGuardId(name: String = "guard") = SlotId(name, EventOnGuardSlot::class)
+        fun eventOnGuardId(name: String = "guard") = SlotId(name, InvocationSlot::class)
         fun eventCustomId(name: String) = SlotId(name, EventCustomSlot::class)
     }
 }
@@ -51,21 +51,21 @@ abstract class EventSlot<T>(id: String, guard: Guard): Slot<T>(id, guard) {
         return false
     }
 
-    abstract fun match(e: Event<ObjectNode>): Boolean
+    abstract fun match(e: Event<*>): Boolean
     abstract fun eventPath(): String
 
 
 }
 
-class EventOnGuardSlot<T>(id: String, guard: Guard): EventSlot<T>(id, guard) {
-    override fun match(e: Event<ObjectNode>): Boolean = e.fullPath == eventPath()
+class InvocationSlot(id: String, guard: Guard): EventSlot<InvocationResult>(id, guard) {
+    override fun match(e: Event<*>): Boolean = e.fullPath == eventPath()
     override fun eventPath(): String = "${guard.path()}/$id"
 
     override fun toString() = "EventOnGuard(path=${eventPath()})"
 }
 
 class EventCustomSlot<T>(val fullPath: String, guard: Guard, val selector: Selector): EventSlot<T>(fullPath, guard) {
-    override fun match(e: Event<ObjectNode>): Boolean = selector.check(e)
+    override fun match(e: Event<*>): Boolean = selector.check(e)
     override fun eventPath(): String = this.id
 
     override fun toString() = "EventCustom(path=$fullPath)"
@@ -87,10 +87,10 @@ class VarSlot<T>(id: String, guard: Guard, payload: T? = null): Slot<T>(id, guar
 
 
 
-@JsonTypeName("event_on_guard")
-data class EventOnGuardSlotDef(override val name: String): SlotDef(name)
+@JsonTypeName("invocation")
+data class InvocationSlotDef(override val name: String): SlotDef(name)
 
-@JsonTypeName("event_custom")
+@JsonTypeName("event")
 data class EventCustomSlotDef(override val name: String, val selector: SelectorDef): SlotDef(name)
 
 @JsonTypeName("var")

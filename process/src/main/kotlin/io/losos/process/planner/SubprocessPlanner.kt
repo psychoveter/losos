@@ -3,7 +3,7 @@ package io.losos.process.planner
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.KeyConvention
 import io.losos.platform.LososPlatform
-import io.losos.process.engine.NodeInfo
+import io.losos.common.NodeInfo
 import io.losos.process.engine.ProcessStartCall
 import org.slf4j.LoggerFactory
 import java.util.*

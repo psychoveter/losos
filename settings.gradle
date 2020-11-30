@@ -1,5 +1,5 @@
 rootProject.name = 'losos'
-include 'eventbus', 'process', 'executor', 'common'
+include 'eventbus', 'process', 'common'
 
 include 'platform-controller'
 project(':platform-controller').projectDir = new File('./botkin/platform-controller')

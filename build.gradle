@@ -28,21 +28,9 @@ subprojects {
 }
 
 
-project("common") {}
-
-
-
-project("executor") {
-    dependencies {
-        compile project(":common")
-    }
-}
 
 project("process") {
-    dependencies {
-        compile project(":common")
-        compile project(":executor")
-    }
+
 }
 
 project("platform-controller") {
