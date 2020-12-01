@@ -77,12 +77,8 @@ object KeyConvention {
     fun keyAction(node: String, pid: String, defId: String)       = "/proc/$node/state/$pid/action/$defId"
     fun keyGuard(node: String, pid: String, defId: String)        = "/proc/$node/state/$pid/guard/$defId"
 
-
-    fun keyEventOfNode(node: String)                              = "/proc/$node/event/"
-
-    fun keyInvocationEvent(
-        node: String,
-        pid: String, defId: String, e: String)                    = "/proc/$node/event/$pid/guard/$defId/invoke/$e"
+    fun keyInvocationEvent(node: String, pid: String, guardId: String, slotId: String)
+                                                                  = "/proc/$node/state/$pid/invoke/$guardId/$slotId"
 
 
 }

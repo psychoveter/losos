@@ -1,7 +1,7 @@
 package io.losos.process.engine
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.common.InvocationExitCode
+import io.losos.common.FlowStatus
 import io.losos.common.InvocationResult
 import io.losos.platform.Event
 import io.losos.actor.Actor
@@ -34,17 +34,17 @@ interface ProcessContext {
     fun action(def: ActionDef): Action<*>
     fun guard(id: String): Guard = guard(def.getGuardDef(id)!!)
     fun guard(def: GuardDef): Guard = guard(def) {
-        def.slots.values
+        def.slots
                 .filterIsInstance<InvocationSlotDef>()
-                .forEach { slot(SlotId.eventOnGuardId(it.name)) }
+                .forEach { slot(SlotId.invocationId(it.name)) }
     }
     fun guard(id: String, block: Guard.() -> Unit): Guard
     fun guard(def: GuardDef, block: Guard.() -> Unit): Guard
 
     //--methods-for-GAN-------------------------------------------------------------------------------------------------
-    fun registerSlot(s: EventSlot<*>): Boolean
-    fun deregisterSlot(s: EventSlot<*>): Boolean
-    fun filterXorGuards(guardId: String, guards: List<Guard>): List<Guard>
+    fun registerSlot(s: Slot<*>): Boolean
+    fun deregisterSlot(s: Slot<*>): Boolean
+    fun filterXorGuards(guardId: String, guards: Set<Guard>): List<Guard>
 }
 
 
@@ -79,7 +79,7 @@ class Process(
 ): Actor<CmdGAN>() {
 
     private val logger = LoggerFactory.getLogger(Process::class.java)
-    private var activeGuards = ArrayList<Guard>()
+    private var activeGuards = HashSet<Guard>()
     lateinit var guardStart: Guard
         private set
     lateinit var guardEnd: Guard
@@ -87,7 +87,7 @@ class Process(
 
     private fun removeGuard(g: Guard) {
         logger.info("remove existing guard: $g")
-        g.getEventSlots().forEach { context.deregisterSlot(it) }
+        g.slots.values.forEach { context.deregisterSlot(it) }
         activeGuards.remove(g)
     }
 
@@ -107,7 +107,7 @@ class Process(
 
         guardStart = context.guard(def.getGuardDef(def.startGuard)!!)
         registerGuard(guardStart)
-        guardEnd = context.guard(def.getGuardDef(def.startGuard)!!)
+        guardEnd = context.guard(def.getGuardDef(def.finishGuard)!!)
         registerGuard(guardEnd)
 
         //TODO: publish process state
@@ -124,7 +124,7 @@ class Process(
         return ProcessInfo(pid, def)
     }
 
-    fun hasStartingEventGuard(): Boolean = guardStart[Guard.SLOT_EVENT_GUARD] != null
+    fun hasStartingEventGuard(): Boolean = guardStart[Guard.SLOT_DEFAULT] != null
 
     //--Command-factory-------------------------------------------------------------------------------------------------
 
@@ -168,22 +168,26 @@ class Process(
         try {
             when (message) {
                 is CmdGuardRegister -> {
-                    if (this::guardEnd.isInitialized && message.guard.def.id == guardEnd.def.id) {
-                        logger.debug("Skip emitting end guard")
+                    if (message.guard.def.id == def.finishGuard && activeGuards.contains(message.guard) ) {
+                        logger.info("Skip emitting end guard")
+                    } else {
+                        if (activeGuards.contains(message.guard))
+                            throw GANException("Process already contains guard ${message.guard.def.id}")
+
+                        message.guard.state = GuardState.WAITING
+
+                        logger.info("Add new guard: ${message.guard}")
+                        activeGuards.add(message.guard)
+
+                        if(message.guard.canBeOpened())
+                            openGuard(message.guard)
+                        else
+                            message.guard.slots.values
+                                .forEach { context.registerSlot(it) }
+
+                        publishGuard(message.guard)
                     }
 
-                    message.guard.state = GuardState.WAITING
-
-                    logger.info("add new guard: ${message.guard}")
-                    activeGuards.add(message.guard)
-
-                    if(message.guard.canBeOpened())
-                        openGuard(message.guard)
-                    else
-                        message.guard.getEventSlots()
-                            .forEach { context.registerSlot(it) }
-
-                    publishGuard(message.guard)
                 }
                 is CmdGuardOpen -> {
                     message.guard.state = GuardState.OPENED
@@ -196,8 +200,7 @@ class Process(
                             context.platform().put(
                                 resultEventPath,
                                 InvocationResult(
-                                    InvocationExitCode.OK,
-                                    message.guard.slotJson()
+                                    context.platform().object2json(message.guard.result())
                                 )
                             )
                         }
@@ -229,14 +232,27 @@ class Process(
                     }
                 }
                 is CmdAction -> {
-                    publishAction(message.action, message.firedGuard)
-                    val cmds = try {
-                        val input = message.firedGuard.toActionInput()
-                        message.action.execute(input)
+                    val ir = try {
+                        message.firedGuard.result()
                     } catch (e: Exception) {
                         throw GANException(e)
                     }
-                    cmds.forEach{send(it)}
+
+                    when(ir.status) {
+                        FlowStatus.OK -> {
+                            val cmds = try {
+                                publishAction(message.action, message.firedGuard)
+                                message.action.execute(ir.data)
+                            } catch (e: Exception) {
+                                throw GANException(e)
+                            }
+                            cmds.forEach{send(it)}
+                        }
+                        FlowStatus.FAILED -> {
+                            halt(ir)
+                        }
+                    }
+
                 }
                 is CmdEvent -> {
                     activeGuards
@@ -254,11 +270,9 @@ class Process(
             logger.error("Failed process execution", e)
             if (resultEventPath != null)
                 context.platform().put(resultEventPath,
-                    InvocationResult(
-                        InvocationExitCode.FAILED,
-                        context.platform().emptyObject().put("reason", e.message)
-                    )
-                )
+                    InvocationResult.fail(context.platform()
+                        .emptyObject()
+                        .put("reason", e.message)))
             this.close()
         }
 

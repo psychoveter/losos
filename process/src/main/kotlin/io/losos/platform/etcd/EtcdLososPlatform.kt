@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.platform.Event
 import io.losos.platform.LososPlatform
-import io.losos.platform.EventImpl
 import io.losos.platform.Subscription
 import io.etcd.jetcd.Client
 import io.etcd.jetcd.KeyValue
@@ -20,6 +19,7 @@ import io.losos.common.AgentDescriptor
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
+import java.lang.IllegalArgumentException
 import java.nio.charset.Charset
 import java.util.*
 import kotlin.collections.HashMap
@@ -36,12 +36,12 @@ class EtcdLososPlatform(
 
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    class EtcdSubscription<T>(
+    class EtcdSubscription<T: Event>(
         override val id: String,
         override val prefix: String,
-        override val callback: suspend (Event<T>) -> Unit,
-        val watcher: Watch.Watcher,
-        val clazz: Class<T>? = null
+        override val callback: suspend (T) -> Unit,
+        override val type: Class<T>,
+        val watcher: Watch.Watcher
     ) : Subscription<T> {
         override fun cancel() = watcher.close()
     }
@@ -49,21 +49,22 @@ class EtcdLososPlatform(
     private val subscriptions: MutableMap<String, EtcdSubscription<*>> = HashMap()
 
 
-    private fun <T> kv2event(keyValue: KeyValue, clazz: Class<T>): Event<T> {
+    private fun <T: Event> kv2event(keyValue: KeyValue, clazz: Class<T>): T {
         val key = bytes2string(keyValue.key)
         val value = keyValue.value
 
-        return if (value == null)
-            EventImpl(key, null)
+        val event = restoreEvent(key, value)
+
+        if (clazz.isInstance(event))
+            return event as T
         else
-            EventImpl(key, bytes2object(value, clazz))
+            throw IllegalArgumentException("Unexpected event type. Expected $clazz, got ${event}")
     }
 
-
-    override fun <T> subscribe(
+    override fun <T: Event> subscribe(
         prefix: String,
         clazz: Class<T>,
-        callback: suspend (e: Event<T>) -> Unit
+        callback: suspend (e: T) -> Unit
     ): Subscription<T> {
 
         val action: (e: WatchEvent) -> Unit = { e ->
@@ -73,7 +74,7 @@ class EtcdLososPlatform(
                     try {
                         callback(kv2event(e.keyValue, clazz))
                     } catch (exc: Exception) {
-                        logger.error("Failed to parse event: e[${e.stringify()}]", e)
+                        logger.error("Failed to parse event: e[${e.stringify()}], expected class $clazz", e)
                     }
                 }
             }
@@ -98,8 +99,8 @@ class EtcdLososPlatform(
             UUID.randomUUID().toString(),
             prefix,
             callback,
-            watcher,
-            clazz
+            clazz,
+            watcher
         )
 
         subscriptions[subs.id] = subs
@@ -107,10 +108,10 @@ class EtcdLososPlatform(
         return subs
     }
 
-    override fun <T> subscribeDelete(
+    override fun <T: Event> subscribeDelete(
         path: String,
         clazz: Class<T>,
-        callback: suspend (e: Event<T>) -> Unit
+        callback: suspend (e: T) -> Unit
     ): Subscription<T> {
         val action: (e: WatchEvent) -> Unit = { e ->
             logger.debug("[${Thread.currentThread().name}] received event: ${e.stringify()}")
@@ -140,8 +141,8 @@ class EtcdLososPlatform(
             UUID.randomUUID().toString(),
             path,
             callback,
-            watcher,
-            clazz
+            clazz,
+            watcher
         )
         subscriptions[subs.id] = subs
 
@@ -162,14 +163,6 @@ class EtcdLososPlatform(
         TODO("Not yet implemented")
     }
 
-
-    override fun put(e: Event<*>) {
-        val pl: ObjectNode = when (e.payload) {
-            is ObjectNode -> e.payload as ObjectNode
-            else -> object2json(e.payload!!)
-        }
-        put(e.fullPath, pl)
-    }
 
     override fun delete(path: String) {
         client.kvClient.delete(fromString(path)).get()
@@ -222,9 +215,10 @@ class EtcdLososPlatform(
     }
 
 
-    override fun history(prefix: String): List<Event<*>> {
+    override fun history(prefix: String): List<Event> {
         TODO("Not yet implemented")
     }
+
 
 
 }

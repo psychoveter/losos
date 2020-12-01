@@ -7,6 +7,7 @@ import io.losos.platform.LososPlatform
 import io.losos.platform.Subscription
 import io.losos.common.AgentDescriptor
 import io.losos.common.AgentTask
+import io.losos.platform.JsonEvent
 import org.slf4j.LoggerFactory
 import java.lang.Exception
 
@@ -40,19 +41,19 @@ class KotlinTaskExecutor(
 
     private val tasksPath = LososPlatform.agentTasksPath(agentName)
 
-    private var jobsSubscription: Subscription<ObjectNode>? = null
+    private lateinit var jobsSubscription: Subscription<JsonEvent>
 
 
     override suspend fun beforeStart() {
 
         //subscribe for tasks
         logger.info("subscribe for tasks at ${tasksPath}")
-        jobsSubscription = platform.subscribe(tasksPath) {
+        jobsSubscription = platform.subscribe(tasksPath, JsonEvent::class.java) {
             try {
-                val task = platform.json2object(it.payload!!, AgentTask::class.java)
+                val task = platform.json2object(it.payload, AgentTask::class.java)
                 send(task)
             } catch (e: Exception) {
-                logger.error("Failed to convert payload to agent task: ${it.payload.toString()}", e)
+                logger.error("Failed to convert payload to agent task: ${it.payload}", e)
                 e.printStackTrace()
             }
         }

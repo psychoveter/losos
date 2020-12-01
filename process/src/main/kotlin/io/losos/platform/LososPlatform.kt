@@ -4,15 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TreeTraversingParser
 import io.etcd.jetcd.ByteSequence
-import io.losos.KeyConvention
 import io.losos.common.*
+import io.losos.process.engine.ProcessStartCall
 import java.nio.charset.Charset
 import java.lang.IllegalArgumentException
 
-interface Subscription<T> {
+interface Subscription<T: Event> {
     val id: String
     val prefix: String
-    val callback: suspend (Event) -> Unit
+    val callback: suspend (T) -> Unit
+    val type: Class<T>
     fun cancel(): Unit
 }
 
@@ -47,22 +48,17 @@ interface LososPlatform {
      */
     fun history(prefix: String): List<Event>
 
+    fun <T: Event> subscribe(prefix: String, clazz: Class<T>, callback: suspend (e: T) -> Unit): Subscription<T>
     fun subscribe(prefix: String, callback: suspend (e: Event) -> Unit) =
-        subscribe(prefix, com.fasterxml.jackson.databind.node.ObjectNode::class.java, callback)
+        subscribe(prefix, Event::class.java, callback)
 
-    fun <T> subscribe(prefix: String, clazz: Class<T>, callback: suspend (e: Event) -> Unit): Subscription<T>
-
-    fun <T> subscribeDelete(path: String, clazz: Class<T>, callback: suspend (e: Event) -> Unit): Subscription<T>
+    fun <T: Event> subscribeDelete(path: String, clazz: Class<T>, callback: suspend (e: T) -> Unit): Subscription<T>
     fun subscribeDelete(path: String, callback: suspend (e: Event) -> Unit) =
-        subscribeDelete(path, ObjectNode::class.java, callback)
+        subscribeDelete(path, Event::class.java, callback)
 
     fun put(path: String, payload: Any)
 
-    fun put(e: Event)
-
     fun delete(path: String)
-
-
 
     /**
      * Read value for the specified key
@@ -142,15 +138,12 @@ interface LososPlatform {
             }
 
             "proc" -> when(tokens[3]) {
-                "registry" -> ProcessEvent(path, bytes2object(data, ProcessInfo::class.java), tokens[2], tokens[4])
+                "registry" -> ProcessEvent(path, bytes2object(data, ProcessStartCall::class.java), tokens[2], tokens[4])
                 "state" -> when (tokens[5]) {
                     "action" -> ActionEntryEvent(path, tokens[2], tokens[4], tokens[6])
                     "guard" -> GuardEntryEvent(path, bytes2json(data), tokens[2], tokens[4], tokens[6])
-                    else -> null
-                }
-                "event" -> when(tokens[7]) {
                     "invoke" -> InvocationEvent(path, bytes2object(data, InvocationResult::class.java),
-                        tokens[2], tokens[4], tokens[6])
+                                                    tokens[2], tokens[4], tokens[6], tokens[7])
                     else -> null
                 }
                 else -> null

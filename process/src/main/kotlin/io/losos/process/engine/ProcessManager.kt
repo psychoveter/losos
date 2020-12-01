@@ -1,7 +1,7 @@
 package io.losos.process.engine
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.common.InvocationExitCode
+import io.losos.common.FlowStatus
 import io.losos.common.InvocationResult
 import io.losos.KeyConvention
 import io.losos.common.ActionDef
@@ -9,6 +9,7 @@ import io.losos.common.GuardDef
 import io.losos.common.GuardRelationType
 import io.losos.common.ProcessDef
 import io.losos.platform.Event
+import io.losos.platform.ProcessEvent
 import io.losos.platform.Subscription
 import io.losos.process.engine.actions.*
 import kotlinx.coroutines.GlobalScope
@@ -30,10 +31,10 @@ class ProcessManager (
     private var job: Job? = null
 
     private val processes     = ConcurrentHashMap<String, Process>()
-    private val subscriptions = ConcurrentHashMap<String, MutableList<Subscription<ObjectNode>>>()
-    private val slots         = ConcurrentHashMap<String, MutableList<EventSlot<*>>>()
+    private val subscriptions = ConcurrentHashMap<String, MutableList<Subscription<*>>>()
+    private val slots         = ConcurrentHashMap<String, MutableList<Slot<*>>>()
 
-    private val busChannel = Channel<Event<ObjectNode>>()
+    private val busChannel = Channel<Event>()
 
     @Volatile private var isStarted = false
 
@@ -53,7 +54,7 @@ class ProcessManager (
         val process = Process(pid, def, context, resultEventPath)
         processes[pid] = process
 
-        // Subscribe for process events
+        // Subscribe for all process events
         subscriptions[pid]!!.add(nodeManager.platform.subscribe(context.pathState()) {
             busChannel.send(it)
         })
@@ -68,7 +69,10 @@ class ProcessManager (
 
         //if args are provided and process is guarded by solo event guard, then kick off it
         if (args != null && process.hasStartingEventGuard())
-            nodeManager.platform.put(process.guardStart.eventGuardSlot()!!.eventPath(), args)
+            nodeManager.platform.put(
+                process.guardStart.eventGuardSlot()!!.eventPath(),
+                InvocationResult(args)
+            )
 
         return process
     }
@@ -87,6 +91,7 @@ class ProcessManager (
                 resultEventPath = resultEventPath,
                 args = args)
         } else {
+            logger.info("Process $pid found as active, do nothing")
             processes[pid]!!
         }
     }
@@ -100,9 +105,9 @@ class ProcessManager (
     }
 
     fun startBrokering() {
-        nodeManager.platform.subscribe(KeyConvention.keyProcessRegistry(nodeManager.name), ProcessStartCall::class.java) {
+        nodeManager.platform.subscribe(KeyConvention.keyProcessRegistry(nodeManager.name), ProcessEvent::class.java) {
             logger.info("Got ProcessStartCall notification: ${it}")
-            val call = it.payload!!
+            val call = it.info
             val def = nodeManager.processLibrary.getAvailableProcesses()[call.procName]
             if (def == null) {
                 logger.error("No process def for name ${call.procName}, " +
@@ -111,11 +116,9 @@ class ProcessManager (
                 if (call.resultEventPath != null) {
                     nodeManager.platform.put(
                         call.resultEventPath,
-                        InvocationResult(
-                            InvocationExitCode.FAILED,
-                            nodeManager.platform.emptyObject()
-                                .put("reason", "Process def ${call.procName} not found")
-                        )
+                        InvocationResult.fail(nodeManager.platform
+                            .emptyObject()
+                                .put("reason", "Process def ${call.procName} not found"))
                     )
                 }
             } else {
@@ -208,7 +211,7 @@ class ProcessManager (
             return g
         }
 
-        override fun filterXorGuards(guardId: String, guards: List<Guard>): List<Guard> {
+        override fun filterXorGuards(guardId: String, guards: Set<Guard>): List<Guard> {
             //TODO: optimize
             val relatedGuardIds: List<String> = def.guardRelations
                     .filter { it.type == GuardRelationType.XOR }
@@ -219,9 +222,9 @@ class ProcessManager (
             return guards.filter { relatedGuardIds.contains(it.def.id) }
         }
 
-        override fun registerSlot(s: EventSlot<*>) = slots[pid]!!.add(s)
+        override fun registerSlot(s: Slot<*>) = slots[pid]!!.add(s)
 
-        override fun deregisterSlot(s: EventSlot<*>) = slots[pid]!!.remove(s)
+        override fun deregisterSlot(s: Slot<*>) = slots[pid]!!.remove(s)
 
     }
 }

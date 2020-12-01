@@ -3,12 +3,12 @@ package io.losos.common
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.process.engine.actions.AgentTaskActionDef
 import io.losos.process.engine.actions.InvocationActionDef
 import io.losos.process.engine.actions.TestActionDef
 import io.losos.process.engine.EventCustomSlotDef
 import io.losos.process.engine.InvocationSlotDef
-import io.losos.process.engine.VarSlotDef
 
 enum class GuardType { AND, OR }
 enum class GuardState { NEW, WAITING, OPENED, CANCELLED, TIMEOUT }
@@ -47,7 +47,15 @@ data class ProcessDef(
 )
 open class ActionDef (
         open val id: String,
-        open val runGuards: List<String>
+        open val runGuards: List<String>,
+        open val invokes: List<InvokeDef>
+)
+
+data class InvokeDef (
+        val guard: String,
+        val slot: String,
+        val data: ObjectNode? = null,
+        val status: FlowStatus = FlowStatus.OK
 )
 
 
@@ -58,8 +66,7 @@ open class ActionDef (
 )
 @JsonSubTypes(
         JsonSubTypes.Type(value = InvocationSlotDef::class, name = "invocation"),
-        JsonSubTypes.Type(value = EventCustomSlotDef::class, name = "event"),
-        JsonSubTypes.Type(value = VarSlotDef::class, name = "var")
+        JsonSubTypes.Type(value = EventCustomSlotDef::class, name = "event")
 )
 open class SlotDef(
         open val name: String
@@ -68,10 +75,12 @@ open class SlotDef(
 
 data class GuardDef(
         val id: String,
-        val slots: Map<String, SlotDef>,
+        val slots: List<SlotDef>,
         val action: String?,
         val type: GuardType = GuardType.AND,
         val signature: GuardSignature = GuardSignature.SINGLE,
         val timeout: Long = -1,
         val timeoutAction: String? = null
-)
+) {
+        fun slot(name: String) = slots.first { it.name == name }
+}

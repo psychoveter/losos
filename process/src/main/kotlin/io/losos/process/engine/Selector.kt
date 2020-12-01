@@ -10,11 +10,11 @@ import io.losos.platform.Event
 //==entities============================================================================================================
 
 interface Selector {
-    fun check(e: Event<*>): Boolean
+    fun check(e: Event): Boolean
 }
 
 class PrefixSelector(val prefix: String): Selector {
-    override fun check(e: Event<*>): Boolean = e.fullPath.startsWith(prefix)
+    override fun check(e: Event): Boolean = e.fullPath.startsWith(prefix)
 }
 
 

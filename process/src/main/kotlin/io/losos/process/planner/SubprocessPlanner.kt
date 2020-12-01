@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.KeyConvention
 import io.losos.platform.LososPlatform
 import io.losos.common.NodeInfo
+import io.losos.platform.NodeEvent
 import io.losos.process.engine.ProcessStartCall
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -47,15 +48,15 @@ class SubprocessPlanner(
 
         logger.info("Subscribe for registry changes...")
 
-        platform.subscribeDelete(KeyConvention.NODE_LEASE_ROOT, NodeInfo::class.java) {
-            logger.info("Node ${it.payload?.name} missed, remove it")
-            removeNodeFromCache(it.payload!!.name)
+        platform.subscribeDelete(KeyConvention.NODE_LEASE_ROOT, NodeEvent::class.java) {
+            logger.info("Node ${it.node} missed, remove it")
+            removeNodeFromCache(it.node)
         }
 
-        platform.subscribe(KeyConvention.NODE_LEASE_ROOT, NodeInfo::class.java) {
-            logger.info("Node ${it.payload} appears: add it")
-            removeNodeFromCache(it.payload!!.name)
-            addNodeToCache(it.payload!!)
+        platform.subscribe(KeyConvention.NODE_LEASE_ROOT, NodeEvent::class.java) {
+            logger.info("Node ${it.info} appears: add it")
+            removeNodeFromCache(it.node)
+            addNodeToCache(it.info)
         }
     }
 

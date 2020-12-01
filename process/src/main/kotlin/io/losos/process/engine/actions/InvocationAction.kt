@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.process.engine.ProcessContext
 import io.losos.process.engine.SlotId
 import io.losos.common.ActionDef
-import io.losos.common.InvocationExitCode
+import io.losos.common.FlowStatus
 import io.losos.common.InvocationResult
 import io.losos.process.planner.ServiceTask
 import org.slf4j.LoggerFactory
@@ -39,24 +39,16 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
 
     companion object {
         const val GUARD_RESULT = "guard_result"
-        val SLOT_INPUT = SlotId.eventOnGuardId("guard")
     }
 
-    override suspend fun action(input: ActionInput) {
+    override suspend fun action(input: ObjectNode?) {
         //1. Rise guards
         val resultGuard = guard(def.guardResult) { addEventSlots() }
         val resultEventPath = resultGuard.eventGuardSlot()!!.eventPath()
-        when (input) {
-            is ActionInputSingle<*> -> actionForSingleInput(input as ActionInputSingle<ObjectNode>, resultEventPath)
-            is ActionInputList<*> -> throw NotImplementedError()
-            is ActionInputMap -> throw NotImplementedError()
-        }
-
+        actionForSingleInput(input, resultEventPath)
     }
 
-    private fun actionForSingleInput(input: ActionInputSingle<ObjectNode>, resultEventPath: String) {
-        val payload = input.data!!
-
+    private fun actionForSingleInput(payload: ObjectNode?, resultEventPath: String) {
         when (def.invoke_type) {
             InvocationType.ASYNC -> {
                 throw NotImplementedError()
@@ -81,9 +73,9 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
                     Thread.sleep(config.delay)
                     logger.info("[STUB_SERVICE]: args = $payload")
                     ctx.platform().put(resultEventPath, InvocationResult(
-                        if (config.fail) InvocationExitCode.FAILED else InvocationExitCode.OK,
                         ctx.platform().emptyObject()
-                            .put("key", "value")
+                            .put("key", "value"),
+                        if (config.fail) FlowStatus.FAILED else FlowStatus.OK
                     )
                     )
                 }.start()
@@ -114,10 +106,8 @@ open class InvocationActionDef (
     override val id: String,
     val invoke_type: InvocationType,
     val config: ObjectNode
-): ActionDef(id, listOf(
-    "$id/${InvocationAction.GUARD_RESULT}"
-)) {
-    val guardResult = "$id/${InvocationAction.GUARD_RESULT}"
+): ActionDef(id, listOf("$id.${InvocationAction.GUARD_RESULT}"), listOf()) {
+    val guardResult = "$id.${InvocationAction.GUARD_RESULT}"
 }
 
 data class SubprocessActionConfig(

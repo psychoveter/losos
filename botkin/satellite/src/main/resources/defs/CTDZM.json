@@ -2,58 +2,33 @@
   "name": "CTDZM",
   "description": "Simple linear sequence of actions with two controller actions and one remote",
   "startGuard": "guard_start",
-  "finishGuard": "action_report_upload/guard_result",
+  "finishGuard": "action_report_upload.guard_result",
   "publishGuardEvents": true,
 
   "guards": [
     {
       "id": "guard_start",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "invocation"
-        }
-      },
+      "slots": [ { "type": "invocation" }],
       "action": "action_study_download"
     },
     {
-      "id": "action_study_download/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "invocation"
-        }
-      },
+      "id": "action_study_download.guard_result",
+      "slots": [ { "type": "invocation" }],
       "action": "action_ml"
     },
     {
-      "id": "action_ml/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "invocation"
-        }
-      },
+      "id": "action_ml.guard_result",
+      "slots": [ { "type": "invocation" }],
       "action": "action_report"
     },
     {
-      "id": "action_report/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "invocation"
-        }
-      },
+      "id": "action_report.guard_result",
+      "slots": [ { "type": "invocation" }],
       "action": "action_report_upload"
     },
     {
-      "id": "action_report_upload/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "invocation"
-        }
-      },
+      "id": "action_report_upload.guard_result",
+      "slots": [ { "type": "invocation" }],
       "action": null
     }
   ],

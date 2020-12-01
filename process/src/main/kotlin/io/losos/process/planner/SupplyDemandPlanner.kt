@@ -36,9 +36,7 @@ class SupplyDemandPlanner(
 ) {
 
     init {
-        platform.subscribe(demandPath, JobDemand::class.java) {
-            val demand = it.payload
-        }
+
     }
 
     fun supply(js: JobSupply) {

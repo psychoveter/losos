@@ -1,5 +1,6 @@
 package io.losos.process.engine.actions
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.KeyConvention
 import io.losos.process.engine.*
 import io.losos.common.ActionDef
@@ -19,7 +20,7 @@ interface Action<T: ActionDef> {
     val ctx: ProcessContext
     fun path() = KeyConvention.keyAction(ctx.nodeManager().name, ctx.pid, def.id)
 
-    suspend fun execute(input: ActionInput): List<CmdGAN>
+    suspend fun execute(input: ObjectNode?): List<CmdGAN>
 }
 
 

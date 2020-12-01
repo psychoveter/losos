@@ -5,15 +5,16 @@ import io.losos.common.InvocationResult
 import io.losos.common.ProcessInfo
 import io.losos.common.NodeInfo
 import io.losos.common.ProcessDef
+import io.losos.process.engine.ProcessStartCall
 
 
 interface Event {
     val fullPath: String
 }
 
-data class EventImpl<T>(
-        override val fullPath: String,
-        val payload: T?
+data class JsonEvent(
+    override val fullPath: String,
+    val payload: ObjectNode
 ): Event
 
 data class ActionEntryEvent(
@@ -36,12 +37,13 @@ data class InvocationEvent(
     val payload: InvocationResult,
     val node: String,
     val pid: String,
-    val guardDefId: String
+    val guardDefId: String,
+    val slotId: String
 ): Event
 
 data class ProcessEvent(
     override val fullPath: String,
-    val info: ProcessInfo,
+    val info: ProcessStartCall,
     val node: String,
     val pid: String
 ): Event

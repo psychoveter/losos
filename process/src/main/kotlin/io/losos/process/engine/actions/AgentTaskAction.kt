@@ -13,19 +13,19 @@ class AgentTaskAction(
     private val self = this
 
     companion object {
-        val SLOT_RESPONSE = SlotId.eventOnGuardId("response")
-        val SLOT_EXCEPTION = SlotId.eventOnGuardId("exception")
-        val SLOT_CTX = SlotId.varId("ctx")
+        val SLOT_RESPONSE = SlotId.invocationId("response")
+        val SLOT_EXCEPTION = SlotId.invocationId("exception")
+//        val SLOT_CTX = SlotId.varId("ctx")
     }
 
-    override suspend fun action(input: ActionInput) {
+    override suspend fun action(input: ObjectNode?) {
         logInfo("start agent task action")
-        val inputMap = input as ActionInputMap
-
-
-        val taskCtx: AgentTaskCtx = (inputMap["ctx"] as? AgentTaskCtx)
-                                    ?: AgentTaskCtx(0, null, ctx.nodeManager().platform.emptyObject())
-        val exception: ObjectNode? = inputMap["exception"] as? ObjectNode
+//        val inputMap = input as ActionInputMap
+//
+//
+//        val taskCtx: AgentTaskCtx = (inputMap["ctx"] as? AgentTaskCtx)
+//                                    ?: AgentTaskCtx(0, null, ctx.nodeManager().platform.emptyObject())
+//        val exception: ObjectNode? = inputMap["exception"] as? ObjectNode
 
 
 //        val inputSlots: Map<String, Any> = input.slots.filterKeys { it != SLOT_CTX.name && it != SLOT_EXCEPTION.name }
@@ -152,7 +152,7 @@ data class AgentTaskActionDef (
         val taskType: String,
         val retryPolicy: RetryPolicyDef,
         val schedulePolicy: SchedulePolicyDef
-): ActionDef(id, runGuards)
+): ActionDef(id, runGuards, listOf())
 
 data class RetryPolicyDef(
     val policy: RetryPolicyType,
