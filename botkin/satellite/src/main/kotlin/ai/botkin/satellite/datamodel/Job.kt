@@ -1,13 +1,11 @@
-package botkin.ai.datamodel
+package ai.botkin.satellite.datamodel
 
 
-import botkin.ai.Context
-import botkin.ai.NitriteManager
+import ai.botkin.satellite.Context
+import ai.botkin.satellite.NitriteManager
 import org.dizitart.kno2.filters.eq
 import org.dizitart.no2.objects.Id
 import org.dizitart.no2.objects.ObjectRepository
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Bean
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -29,11 +27,11 @@ interface JobDao{
     fun getAll():List<Job>
     fun updateJobStatus(jobId: String, status:String)
     fun getJobsByStatus(status:String):List<Job>
-    fun getJobById(jobId:String):Job
+    fun getJobById(jobId:String): Job
     fun addSeriesInfo(jobId:String, seriesPath:String)
 }
 
-@Component
+//@Component
 class JobDaoImpl(
     val jobs:ObjectRepository<Job> = NitriteManager.getDBInstance(Context()).getRepository(
         Job::class.java)): JobDao {

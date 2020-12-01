@@ -1,4 +1,4 @@
-package botkin.ai.kuberclient
+package ai.botkin.satellite.kuberclient
 
 
 

@@ -1,5 +1,5 @@
 
-import botkin.ai.kuberclient.OfficialKubernetesClient
+import ai.botkin.satellite.kuberclient.OfficialKubernetesClient
 
 
 class TestOfficialKubernetesClient {

@@ -1,10 +1,9 @@
-package botkin.ai
+package ai.botkin.satellite
 
-import botkin.ai.datamodel.Task
+import ai.botkin.satellite.datamodel.Task
 import org.dizitart.kno2.filters.eq
 import org.dizitart.kno2.nitrite
 import org.dizitart.no2.Nitrite
-import org.dizitart.no2.mapper.JacksonMapper
 import org.dizitart.no2.objects.ObjectRepository
 
 enum class RestorePolicy{

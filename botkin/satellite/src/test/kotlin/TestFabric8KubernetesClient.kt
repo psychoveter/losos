@@ -1,4 +1,4 @@
-import botkin.ai.kuberclient.Fabric8KubernetesClient
+import ai.botkin.satellite.kuberclient.Fabric8KubernetesClient
 
 class TestFabric8KubernetesClient {
 }

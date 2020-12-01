@@ -1,16 +1,13 @@
-package botkin.ai
+package ai.botkin.satellite
 
-import ai.botkin.satellite.task.MLTask
 import org.dcm4che3.data.Attributes
 import org.dcm4che3.data.Tag
 import org.dcm4che3.io.DicomInputStream
 import org.dcm4che3.util.SafeClose
 import java.io.File
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.stream.Collectors
 import kotlin.streams.toList
 
 typealias SeriaPath = String
@@ -31,9 +28,10 @@ object DataProvider{
     val filters = mapOf("CT" to ctFilter, "CTCR2" to ctFilter,
         "CT2" to ctFilter,
         "FCT" to ctFilter,
-                            "DxSyndromeNewMarkup" to DXFilter(), "MG" to MGFilter())
-    fun chooseSeries(studyUID: String, target:String):SeriaPath?{
-        return "${paths.studiesBasePath}/$studyUID/${filters[target]!!.filterSeries(studyUID)}"
+                            "DxSyndromeNewMarkup" to DXFilter(), "MG" to MGFilter()
+    )
+    fun chooseSeries(studyUID: String, target:String): SeriaPath?{
+        return "${FilePaths.studiesBasePath}/$studyUID/${filters[target]!!.filterSeries(studyUID)}"
     }
 //    fun getDataForML(studyUID: String, target:String):String{
 //        return ""
@@ -50,7 +48,7 @@ object DataProvider{
 }
 
 interface SeriesFilter{
-    fun filterSeries(studyUID:String):SeriaPath?
+    fun filterSeries(studyUID:String): SeriaPath?
 }
 
 class DXFilter: SeriesFilter {
@@ -68,7 +66,7 @@ class CTFilter: SeriesFilter {
     //TODO add checking organ tag and filtering by convolution kernel
     data class SeriaInfo(val seriesUID:String, val size:Long, val sliceThickness:Double)
 
-    val sliceThicknessPredicate = {seriaInfo:SeriaInfo -> seriaInfo.sliceThickness < 5}
+    val sliceThicknessPredicate = {seriaInfo: SeriaInfo -> seriaInfo.sliceThickness < 5}
     val sliceNumberPredicate = {it:Path -> Files.list(Paths.get(it.toString())).count() > 17}
 
     override fun filterSeries(studyUID: String): SeriaPath? {
@@ -101,7 +99,7 @@ class CTFilter: SeriesFilter {
 
 }
 
-class MGFilter:SeriesFilter {
+class MGFilter: SeriesFilter {
     override fun filterSeries(studyUID: String): SeriaPath {
         return ""
     }

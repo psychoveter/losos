@@ -1,7 +1,7 @@
-package botkin.ai.datamodel
+package ai.botkin.satellite.datamodel
 
-import botkin.ai.NitriteManager
-import botkin.ai.Context
+import ai.botkin.satellite.NitriteManager
+import ai.botkin.satellite.Context
 import org.dizitart.no2.objects.ObjectRepository
 import org.springframework.stereotype.Component
 
@@ -17,7 +17,7 @@ interface QuarantineDao{
     fun getAll():List<Quarantine>
 }
 
-@Component
+//@Component
 class QuarantineDaoImpl(private val quarantineRepository:ObjectRepository<Quarantine>
         = NitriteManager.getDBInstance(Context()).getRepository(
         Quarantine::class.java)): QuarantineDao {

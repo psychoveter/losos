@@ -1,9 +1,9 @@
-package botkin.ai
+package ai.botkin.satellite
 
 
+import ai.botkin.satellite.datamodel.*
+import ai.botkin.satellite.messages.*
 import ai.botkin.satellite.task.*
-import botkin.ai.datamodel.*
-import botkin.ai.messages.*
 import io.opentracing.Span
 import io.opentracing.Tracer
 import org.slf4j.LoggerFactory
@@ -13,14 +13,14 @@ import org.springframework.web.client.RestClientException
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
 
-@Component
+//@Component
 class Processor: Thread() {
 
     private val logger = LoggerFactory.getLogger(javaClass)
     @Autowired
-    lateinit var messageQueue: ConcurrentLinkedDeque<Message>
+    lateinit var messageQueue: ConcurrentLinkedDeque<TEPMessage>
     @Autowired
-    lateinit var client:RemoteClient
+    lateinit var client: RemoteClient
 
 
     @Autowired
@@ -39,7 +39,7 @@ class Processor: Thread() {
     }
 
     override fun run() {
-        logger.info("Started botkin.ai.Processor thread")
+        logger.info("Started ai.botkin.satellite.Processor thread")
         sleep(5000)
         while (true){
             sleep(200)
@@ -129,7 +129,7 @@ class Processor: Thread() {
                         return
                     }
                 }
-                val markupPath = "${DataProvider.paths.markupBasePath}/${currentJob.studyUID}.json"
+                val markupPath = "${FilePaths.markupBasePath}/${currentJob.studyUID}.json"
 
                 when (workerType){
                     "ml" -> client.postTaskForML(workerType, Request(workerType,
@@ -142,22 +142,22 @@ class Processor: Thread() {
                     "report" -> client.postTaskReport(workerType, Request(workerType,
                         listOf(
                             ReportTask(taskId, seriesPath!!, markupPath, currentJob.target,
-                            SavePaths("${DataProvider.paths.reportsBasePath}/${currentJob.studyUID}/sr.dcm",
-                                      "${DataProvider.paths.reportsBasePath}/${currentJob.studyUID}/pr.dcm",
-                                      "${DataProvider.paths.reportsBasePath}/${currentJob.studyUID}/SC")))),
+                            SavePaths("${FilePaths.reportsBasePath}/${currentJob.studyUID}/sr.dcm",
+                                      "${FilePaths.reportsBasePath}/${currentJob.studyUID}/pr.dcm",
+                                      "${FilePaths.reportsBasePath}/${currentJob.studyUID}/SC")))),
                             span = jobIdToSpan[currentJob.id]!!
                             )
                     "download" -> client.postTaskGatewayDownload(workerType, Request(workerType,
                         listOf(DownloadTask(taskId, currentJob.studyUID,
-                            "${DataProvider.paths.studiesBasePath}/${currentJob.studyUID}"))),
+                            "${FilePaths.studiesBasePath}/${currentJob.studyUID}"))),
                             span = jobIdToSpan[currentJob.id]!!)
                     "upload" -> client.postTaskGatewayUpload(
                         workerType, Request(workerType, listOf(
                             UploadTask(taskId,
                             UploadFiles(
-                                "${DataProvider.paths.reportsBasePath}/${currentJob.studyUID}/sr.dcm",
-                                "${DataProvider.paths.reportsBasePath}/${currentJob.studyUID}/SC",
-                                "${DataProvider.paths.reportsBasePath}/${currentJob.studyUID}/pr.dcm",
+                                "${FilePaths.reportsBasePath}/${currentJob.studyUID}/sr.dcm",
+                                "${FilePaths.reportsBasePath}/${currentJob.studyUID}/SC",
+                                "${FilePaths.reportsBasePath}/${currentJob.studyUID}/pr.dcm",
                                 markupPath),
                                 "destination")
                             )

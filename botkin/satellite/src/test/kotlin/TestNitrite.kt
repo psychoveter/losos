@@ -1,7 +1,7 @@
-import botkin.ai.datamodel.Job
-import botkin.ai.datamodel.JobDaoImpl
-import botkin.ai.datamodel.Task
-import botkin.ai.datamodel.TaskDaoImpl
+import ai.botkin.satellite.datamodel.Job
+import ai.botkin.satellite.datamodel.JobDaoImpl
+import ai.botkin.satellite.datamodel.Task
+import ai.botkin.satellite.datamodel.TaskDaoImpl
 import org.dizitart.kno2.nitrite
 import org.dizitart.no2.NitriteId
 import java.util.*

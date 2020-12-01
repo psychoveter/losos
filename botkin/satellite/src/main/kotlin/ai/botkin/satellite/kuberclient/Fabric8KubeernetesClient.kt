@@ -1,10 +1,10 @@
-package botkin.ai.kuberclient
+package ai.botkin.satellite.kuberclient
 
 import io.fabric8.kubernetes.api.model.PodList
 import io.fabric8.kubernetes.client.Config
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
 
-class Fabric8KubernetesClient(config: Config? = null):KubernetesClient{
+class Fabric8KubernetesClient(config: Config? = null): KubernetesClient {
     private val client = if (config != null) DefaultKubernetesClient(config) else DefaultKubernetesClient()
 
     override fun initClient() {

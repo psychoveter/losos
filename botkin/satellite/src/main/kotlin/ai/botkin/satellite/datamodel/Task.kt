@@ -1,7 +1,7 @@
-package botkin.ai.datamodel
+package ai.botkin.satellite.datamodel
 
-import botkin.ai.Context
-import botkin.ai.NitriteManager
+import ai.botkin.satellite.Context
+import ai.botkin.satellite.NitriteManager
 import org.dizitart.kno2.filters.and
 import org.dizitart.kno2.filters.eq
 import org.dizitart.no2.IndexType
@@ -35,7 +35,7 @@ interface TaskDao{
     fun setError(taskId:String, error:String)
 }
 
-@Component
+//@Component
 class TaskDaoImpl(private val tasks: ObjectRepository<Task> =
      NitriteManager.getDBInstance(Context()).getRepository(
         Task::class.java)): TaskDao

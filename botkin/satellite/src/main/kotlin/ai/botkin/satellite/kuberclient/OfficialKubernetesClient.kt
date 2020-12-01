@@ -1,12 +1,13 @@
-package botkin.ai.kuberclient
+package ai.botkin.satellite.kuberclient
 
+import ai.botkin.satellite.kuberclient.KubernetesClient
 import io.kubernetes.client.openapi.ApiClient
 import io.kubernetes.client.openapi.Configuration
 import io.kubernetes.client.openapi.apis.CoreV1Api
 import io.kubernetes.client.openapi.models.V1PodList
 import io.kubernetes.client.util.Config
 
-class OfficialKubernetesClient:KubernetesClient{
+class OfficialKubernetesClient: KubernetesClient {
 
     override fun initClient() {
         val client: ApiClient = Config.defaultClient()

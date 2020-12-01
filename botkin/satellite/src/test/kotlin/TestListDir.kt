@@ -1,10 +1,4 @@
-import botkin.ai.CTFilter
-import botkin.ai.DicomUtils
-import botkin.ai.FilePaths
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
-import kotlin.streams.toList
+import ai.botkin.satellite.CTFilter
 
 fun main() {
 //    val folders = Files.list(Paths.get("/Users/valentin/programming/c++"))
