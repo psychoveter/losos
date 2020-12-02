@@ -1,9 +1,11 @@
 package ai.botkin.satellite
 
-import ai.botkin.satellite.messages.TEPMessage
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
@@ -12,34 +14,16 @@ import springfox.documentation.builders.RequestHandlerSelectors
 import springfox.documentation.spi.DocumentationType
 import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger2.annotations.EnableSwagger2
-import java.util.concurrent.ConcurrentLinkedDeque
 
-@Configuration
-@ConfigurationProperties(prefix = "agent")
-class AgentsConfig{
-    lateinit var ml:String
-    lateinit var reporter:String
-    lateinit var gateway:String
-}
+
 
 
 @SpringBootApplication
 @Configuration
 @ComponentScan
 @EnableSwagger2
-
+@ConfigurationPropertiesScan("ai.botkin.config")
 class SatelliteApplication {
-
-    //    @Autowired lateinit var processor:Processor
-    @Bean
-    fun messageQueue():ConcurrentLinkedDeque<TEPMessage>{
-        return ConcurrentLinkedDeque<TEPMessage>()
-    }
-    @Bean
-    fun client(): RemoteClient {
-        return RestClient()
-    }
-
 
     @Bean
     fun api(): Docket? {
@@ -54,5 +38,6 @@ class SatelliteApplication {
 
 
 fun main(args: Array<String>) {
+
     SpringApplication.run(SatelliteApplication::class.java, *args)
 }

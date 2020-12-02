@@ -20,7 +20,7 @@ import org.springframework.web.client.RestTemplate
 @Configuration
 open class LososConfig {
 
-    val etcdUrls: List<String> = listOf("http://81.29.130.10:2379")
+    val etcdUrls: List<String> = listOf("http://127.0.0.1:2379")
 
     @Autowired
     lateinit var objectMapper: ObjectMapper
@@ -62,4 +62,11 @@ open class LososConfig {
         manager.start()
         return manager
     }
+//
+//    @Bean
+//    @ConfigurationProperties(prefix = "agent")
+//    fun agentsConfig():AgentsConfig{
+//        return AgentsConfig()
+//
+//    }
 }

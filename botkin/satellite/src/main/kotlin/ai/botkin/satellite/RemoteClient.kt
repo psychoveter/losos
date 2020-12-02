@@ -2,6 +2,7 @@ package ai.botkin.satellite
 
 
 
+import ai.botkin.satellite.config.AgentsConfig
 import ai.botkin.satellite.task.*
 import ai.botkin.satellite.tracing.CustomTracingRestTemplateInterceptor
 import io.opentracing.Span

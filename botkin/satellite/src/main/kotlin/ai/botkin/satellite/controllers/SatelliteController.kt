@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.util.concurrent.ConcurrentLinkedDeque
+import kotlin.random.Random
+import kotlin.time.ExperimentalTime
 
 @RestController
 @RequestMapping("/api")
@@ -101,13 +103,13 @@ class SatelliteController {
     /**
      * testing function
      * */
-    fun postJob(@PathVariable workerType: String):ResponseEntity<String>{
+    fun postTask(@PathVariable workerType: String):ResponseEntity<String>{
 //        messageQueue.add(ScheduleJob(workerType = "satellite", studyUID = jobRequest.studyUID, target = jobRequest.target))
         val mapper = ObjectMapper()
         when (workerType) {
             "ml" -> {
                 val node = mapper.createObjectNode()
-                    .put("id", "ml-1")
+                    .put("id", "ml-${Random.nextLong()}")
                     .put("dicomPath",
                         "/tmp/dicoms/1.2.392.200036.9116.2.5.1.11341.1409398444.1586329368.638766/1.2.392.200036.9116.2.5.1.11341.1409398444.1586329856.857024")
                     .put("markupPath", "/tmp/markups/1.2.392.200036.9116.2.5.1.11341.1409398444.1586329368.638766.json")
@@ -117,7 +119,7 @@ class SatelliteController {
             }
             "report" -> {
                 val node  = mapper.createObjectNode()
-                    .put("id", "report-1")
+                    .put("id", "report-${Random.nextLong()}")
                     .put("dicomPath", "/tmp/dicoms/1.2.392.200036.9116.2.5.1.11341.1409398444.1586329368.638766/1.2.392.200036.9116.2.5.1.11341.1409398444.1586329856.857024")
                     .put("markupPath", "/tmp/markups/1.2.392.200036.9116.2.5.1.11341.1409398444.1586329368.638766.json")
                     .put("target", "FCT")

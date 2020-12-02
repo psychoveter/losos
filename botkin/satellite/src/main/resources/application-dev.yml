@@ -2,6 +2,12 @@ spring:
   profiles:
     active: dev
 agent:
-  ml: http://192.168.2.5:8001
-  reporter: http://192.168.2.5:8000
-  gateway: http://192.168.2.5:8002
+  ml: http://192.168.2.2:8001
+  reporter: http://192.168.2.2:8000
+  gateway: http://192.168.2.2:8002
+
+timelimit:
+  ml:
+    FCT: 15
+    CT: 15
+    DX: 5
