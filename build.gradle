@@ -28,22 +28,10 @@ subprojects {
 }
 
 
-project("common") {}
 
+project("process") {}
 
-
-project("executor") {
-    dependencies {
-        compile project(":common")
-    }
-}
-
-project("process") {
-    dependencies {
-        compile project(":common")
-        compile project(":executor")
-    }
-}
+project("dicom-tools") {}
 
 project("platform-controller") {
     dependencies {

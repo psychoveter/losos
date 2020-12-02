@@ -1,21 +1,22 @@
 package io.losos.process.engine
 
 import com.fasterxml.jackson.annotation.JsonTypeName
-import com.fasterxml.jackson.databind.node.ObjectNode
+import io.losos.KeyConvention
+import io.losos.common.InvocationResult
 import io.losos.platform.Event
-import io.losos.process.model.SlotDef
+import io.losos.common.SlotDef
+import io.losos.platform.InvocationEvent
 import java.lang.IllegalStateException
 import kotlin.reflect.KClass
 
 
 data class SlotId<T: Slot<*>>(val name: String, val clazz: KClass<T>) {
     companion object {
-        fun varId(name: String) = SlotId(name, VarSlot::class)
 
         /**
          * Default name of the event on guard is "guard"
          */
-        fun eventOnGuardId(name: String = "guard") = SlotId(name, EventOnGuardSlot::class)
+        fun invocationId(name: String = "guard") = SlotId(name, InvocationSlot::class)
         fun eventCustomId(name: String) = SlotId(name, EventCustomSlot::class)
     }
 }
@@ -23,75 +24,74 @@ data class SlotId<T: Slot<*>>(val name: String, val clazz: KClass<T>) {
 /**
  * Stateful class which holds corresponding event
  */
-open class Slot<T>(val id: String, val guard: Guard) {
+open class Slot<T: Event>(
+    val id: String, val guard: Guard, val eventType: Class<T>
+) {
+
     init {
         guard.slots[id] = this
     }
 
-    var data: T? = null
-        protected set
+    lateinit var event: T
+        private set
 
-    fun isEmpty() = data == null
-}
-
-
-abstract class EventSlot<T>(id: String, guard: Guard): Slot<T>(id, guard) {
-
-    protected lateinit var event: Event<T>
-
-    fun accept(e: Event<T>): Boolean {
+    fun accept(e: Event): Boolean {
         if( !isEmpty() )
             throw IllegalStateException("Slot already has event, cannot accept more")
 
-        if ( e.fullPath == eventPath() ) {
-            data = e.payload
+        if (!eventType.isInstance(e))
+            return false
+
+        if (match(e)) {
+            this.event = e as T
             return true
         }
 
         return false
     }
 
-    abstract fun match(e: Event<ObjectNode>): Boolean
-    abstract fun eventPath(): String
+    fun isEmpty() = !this::event.isInitialized
 
+    open fun match(e: Event): Boolean = e.fullPath == eventPath()
+
+    open fun eventPath(): String = KeyConvention.keyInvocationEvent (
+        guard.context.nodeManager().name,
+        guard.context.pid,
+        guard.def.id,
+        id
+    )
 
 }
 
-class EventOnGuardSlot<T>(id: String, guard: Guard): EventSlot<T>(id, guard) {
-    override fun match(e: Event<ObjectNode>): Boolean = e.fullPath == eventPath()
-    override fun eventPath(): String = "${guard.path()}/$id"
+class InvocationSlot(id: String, guard: Guard): Slot<InvocationEvent>(id, guard, InvocationEvent::class.java) {
 
-    override fun toString() = "EventOnGuard(path=${eventPath()})"
+    override fun toString() = "InvocationSlot(path=${eventPath()})"
+
+    override fun eventPath(): String = KeyConvention.keyInvocationEvent (
+        guard.context.nodeManager().name,
+        guard.context.pid,
+        guard.def.id,
+        id
+    )
 }
 
-class EventCustomSlot<T>(val fullPath: String, guard: Guard, val selector: Selector): EventSlot<T>(fullPath, guard) {
-    override fun match(e: Event<ObjectNode>): Boolean = selector.check(e)
+class EventCustomSlot<T: Event>(
+    fullPath: String,
+    guard: Guard,
+    val selector: Selector,
+    eventType: Class<T>
+): Slot<T>(fullPath, guard, eventType) {
+
+    override fun match(e: Event): Boolean = selector.check(e)
     override fun eventPath(): String = this.id
-
-    override fun toString() = "EventCustom(path=$fullPath)"
+    override fun toString() = "EventCustom(path=${eventPath()})"
 }
 
-class VarSlot<T>(id: String, guard: Guard, payload: T? = null): Slot<T>(id, guard) {
-    init { this.data = payload }
-
-    fun withPayload(pl: T): VarSlot<T> {
-        this.data = pl
-        return this
-    }
-
-    override fun toString() = "VarSlot(id=$id)"
-}
 
 //==defenitions=========================================================================================================
 
+@JsonTypeName("invocation")
+data class InvocationSlotDef(override val name: String = "default"): SlotDef(name)
 
-
-
-@JsonTypeName("event_on_guard")
-data class EventOnGuardSlotDef(override val name: String): SlotDef(name)
-
-@JsonTypeName("event_custom")
+@JsonTypeName("event")
 data class EventCustomSlotDef(override val name: String, val selector: SelectorDef): SlotDef(name)
-
-@JsonTypeName("var")
-data class VarSlotDef(override val name: String): SlotDef(name)

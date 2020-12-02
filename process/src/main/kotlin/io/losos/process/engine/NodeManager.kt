@@ -1,6 +1,7 @@
 package io.losos.process.engine
 
 import io.losos.KeyConvention
+import io.losos.common.NodeInfo
 import io.losos.platform.LososPlatform
 import io.losos.process.planner.AsyncActionManager
 import io.losos.process.planner.ServiceActionManager
@@ -18,16 +19,11 @@ object IDGenUUID: IDGenerator {
     override fun newUniquePID(): String = UUID.randomUUID().toString()
 }
 
-data class NodeInfo (
-    val name: String,
-    val host: String,
-    val processDefNames: Collection<String> = listOf()
-)
-
 class NodeManager (
     val platform: LososPlatform,
     val processLibrary: ProcessLibrary,
     val serviceActionManager: ServiceActionManager? = null,
+    val asyncActionManager: AsyncActionManager? = null,
     val name: String = UUID.randomUUID().toString(),
     val host: String = "localhost",
     val idGen: IDGenerator = IDGenUUID
@@ -36,7 +32,6 @@ class NodeManager (
     private val logger = LoggerFactory.getLogger(NodeManager::class.java)
 
     val processManager = ProcessManager(this)
-    val asyncActionManager = AsyncActionManager(this)
     val subprocessPlanner = SubprocessPlanner(platform)
 
     private var isRunning = true
@@ -65,5 +60,8 @@ class NodeManager (
         leaseThread.interrupt()
     }
 
-    fun info(): NodeInfo = NodeInfo(name, host, processLibrary.getAvailableProcesses().values.map { it.name })
+    fun info(): NodeInfo = NodeInfo(
+        name,
+        host,
+        processLibrary.getAvailableProcesses().values.map { it.name })
 }

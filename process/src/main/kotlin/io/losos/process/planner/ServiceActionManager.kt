@@ -1,7 +1,6 @@
 package io.losos.process.planner
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.losos.process.engine.actions.ServiceActionConfig
 
 interface ServiceActionManager {
 
@@ -18,5 +17,5 @@ interface ServiceActionManager {
 data class ServiceTask(
     val workerType: String,
     val taskType: String,
-    val args: ObjectNode
+    val args: ObjectNode?
 )

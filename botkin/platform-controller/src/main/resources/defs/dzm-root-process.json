@@ -8,27 +8,17 @@
   "guards": [
     {
       "id": "guard_start",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
+      "slots": [ { "type": "invocation" } ],
       "action": "action_call"
     },
     {
-      "id": "action_call/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
+      "id": "action_call.guard_result",
+      "slots": [ { "type": "invocation" } ],
       "action": "action_success"
     },
     {
       "id": "guard_exit",
-      "slots": {},
+      "slots": [ { "type": "invocation" } ],
       "action": null
     }
   ],
@@ -48,7 +38,11 @@
       "id": "action_success",
       "type": "test",
       "message": "I'M DONE!! Now lets do kafka notification",
-      "runGuards": ["guard_exit"]
+      "runGuards": ["guard_exit"],
+      "invokes": [{
+        "guard": "guard_exit",
+        "slot": "default"
+      }]
     }
   ]
 }

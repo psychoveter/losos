@@ -9,10 +9,12 @@ import io.losos.platform.etcd.EtcdLososPlatform
 import io.losos.process.engine.NodeManager
 import io.losos.process.library.EtcdProcessLibrary
 import io.losos.process.library.ProcessLibrary
+import io.losos.process.planner.AsyncActionManager
 import io.losos.process.planner.ServiceActionManager
 import io.opentracing.Tracer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.client.RestTemplate
@@ -24,6 +26,9 @@ open class LososConfig {
 
     @Autowired
     lateinit var objectMapper: ObjectMapper
+
+    @Autowired
+    lateinit var autowireFactory: AutowireCapableBeanFactory
 
     @Value("\${losos.node-name:satellite-1}")
     lateinit var nodeName: String
@@ -49,12 +54,23 @@ open class LososConfig {
     @Bean
     open fun serviceManager(): ServiceActionManager = ServiceActionManagerImpl(restTemplate(), platform(), tracer())
 
+
+    @Bean
+    open fun asyncManager(): AsyncActionManager {
+        val aam = AsyncActionManager(platform())
+        aam.taskInitInterceptor = {
+            autowireFactory.autowireBean(it)
+        }
+        return aam
+    }
+
     @Bean
     open fun nodeManager(): NodeManager {
         val manager = NodeManager(
             platform(),
             library(),
             serviceActionManager = serviceManager(),
+            asyncActionManager = asyncManager(),
             //TODO: setup from environment
             name = nodeName,
             host = "localhost"

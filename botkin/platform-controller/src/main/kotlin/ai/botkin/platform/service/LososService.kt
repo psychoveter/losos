@@ -3,7 +3,7 @@ package ai.botkin.platform.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.process.engine.NodeManager
-import io.losos.process.model.ProcessDef
+import io.losos.common.ProcessDef
 import org.springframework.core.io.ResourceLoader
 import org.springframework.stereotype.Component
 

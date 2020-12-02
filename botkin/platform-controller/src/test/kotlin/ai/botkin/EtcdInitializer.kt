@@ -1,12 +1,11 @@
 package ai.botkin
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.etcd.jetcd.options.DeleteOption
 import io.etcd.recipes.common.connectToEtcd
 import io.losos.KeyConvention
 import io.losos.TestUtils
 import io.losos.platform.etcd.EtcdLososPlatform
-import io.losos.process.model.ProcessDef
+import io.losos.common.ProcessDef
 import java.io.File
 
 class EtcdInitializer(val urls: List<String>){
@@ -52,12 +51,12 @@ class EtcdInitializer(val urls: List<String>){
             val platform = EtcdLososPlatform(client, TestUtils.jsonMapper)
             //initialize platform
             getPlatformProcesses().forEach {
-                platform.put(KeyConvention.keyProcessLibrary(platform1, it.name), it)
+                platform.put(KeyConvention.keyNodeLibraryEntry(platform1, it.name), it)
             }
 
             //initialize satellites
             getSatelliteProcesses().forEach {
-                platform.put(KeyConvention.keyProcessLibrary(satellite1, it.name), it)
+                platform.put(KeyConvention.keyNodeLibraryEntry(satellite1, it.name), it)
             }
         }
         return this

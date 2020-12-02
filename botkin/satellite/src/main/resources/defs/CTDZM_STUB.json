@@ -2,58 +2,33 @@
   "name": "CTDZM_STUB",
   "description": "Simple linear sequence of actions with two controller actions and one remote",
   "startGuard": "guard_start",
-  "finishGuard": "action_report_upload/guard_result",
+  "finishGuard": "action_report_upload.guard_result",
   "publishGuardEvents": true,
 
   "guards": [
     {
       "id": "guard_start",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
+      "slots": [ { "type": "invocation" } ],
       "action": "action_study_download"
     },
     {
-      "id": "action_study_download/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
+      "id": "action_study_download.guard_result",
+      "slots": [ { "type": "invocation" } ],
       "action": "action_ml"
     },
     {
-      "id": "action_ml/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
+      "id": "action_ml.guard_result",
+      "slots": [ { "type": "invocation" } ],
       "action": "action_report"
     },
     {
-      "id": "action_report/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
+      "id": "action_report.guard_result",
+      "slots": [ { "type": "invocation" } ],
       "action": "action_report_upload"
     },
     {
-      "id": "action_report_upload/guard_result",
-      "slots": {
-        "guard": {
-          "name": "guard",
-          "type": "event_on_guard"
-        }
-      },
+      "id": "action_report_upload.guard_result",
+      "slots": [ { "type": "invocation" } ],
       "action": null
     }
   ],
@@ -64,10 +39,12 @@
     {
       "id": "action_study_download",
       "type": "invoke",
-      "invoke_type": "SERVICE_STUB",
+      "invoke_type": "ASYNC",
       "config": {
-        "workerType": "gateway",
-        "taskType": "download_study"
+        "class": "ai.botkin.satellite.gateway.GatewayMoveAsyncTask",
+        "settings": {
+          "targetAETitle": "SOME_TEST_PACS"
+        }
       }
     },
     {
