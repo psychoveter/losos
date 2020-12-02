@@ -39,10 +39,12 @@
     {
       "id": "action_study_download",
       "type": "invoke",
-      "invoke_type": "SERVICE_STUB",
+      "invoke_type": "ASYNC",
       "config": {
-        "workerType": "gateway",
-        "taskType": "download_study"
+        "class": "ai.botkin.satellite.gateway.GatewayMoveAsyncTask",
+        "settings": {
+          "targetAETitle": "SOME_TEST_PACS"
+        }
       }
     },
     {

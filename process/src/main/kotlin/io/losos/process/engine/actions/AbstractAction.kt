@@ -28,8 +28,9 @@ abstract class AbstractAction<T: ActionDef>(
         val guard = ctx.guard(guardId, block)
         logger.info("Created guard: $guard")
         cmds.add(CmdGuardRegister(guard))
+
         for(invoke in def.invokes)
-            cmds.add(CmdWork {
+            scheduleOnProcess {
                 val path = KeyConvention.keyInvocationEvent(
                     context.nodeManager().name,
                     context.pid,
@@ -40,11 +41,11 @@ abstract class AbstractAction<T: ActionDef>(
                     path,
                     InvocationResult(invoke.data, invoke.status)
                 )
-            })
+            }
         return guard
     }
 
-    fun scheduleOnProcess(block: Process.() -> Unit) {
+    fun scheduleOnProcess (block: Process.() -> Unit) {
         cmds.add(CmdWork(block))
     }
 

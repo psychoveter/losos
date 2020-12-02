@@ -268,12 +268,9 @@ class Process(
             }
         } catch (e: Exception) {
             logger.error("Failed process execution", e)
-            if (resultEventPath != null)
-                context.platform().put(resultEventPath,
-                    InvocationResult.fail(context.platform()
-                        .emptyObject()
-                        .put("reason", e.message)))
-            this.close()
+            halt(InvocationResult.fail(context.platform()
+                .emptyObject()
+                .put("reason", e.message)))
         }
 
     }

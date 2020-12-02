@@ -6,3 +6,6 @@ project(':platform-controller').projectDir = new File('./botkin/platform-control
 
 include 'satellite'
 project(':satellite').projectDir = new File('./botkin/satellite')
+
+include 'dicom-tools'
+project(':dicom-tools').projectDir = new File('./botkin/dicom-tools')

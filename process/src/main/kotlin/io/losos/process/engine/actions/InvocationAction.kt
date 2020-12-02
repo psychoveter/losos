@@ -51,19 +51,33 @@ class InvocationAction<T: InvocationActionDef>(def: T, ctx: ProcessContext):
     private fun actionForSingleInput(payload: ObjectNode?, resultEventPath: String) {
         when (def.invoke_type) {
             InvocationType.ASYNC -> {
-                throw NotImplementedError()
+                if (ctx.nodeManager().asyncActionManager == null)
+                    throw RuntimeException("AsyncActionManager is not configured")
+
+                val config = ctx.platform().json2object(def.config, AsyncActionConfig::class.java)
+
+                /**
+                 * Async task accepts arguments and settings. Settings are configured at def level and args are
+                 * bypassed from firing guard.
+                 */
+                ctx.nodeManager().asyncActionManager?.executeAsyncAction(
+                    actionClass = config.`class`,
+                    args = payload,
+                    settings = config.settings,
+                    resultEventPath = resultEventPath,
+                    dataPath = this.path()
+                )
             }
 
             InvocationType.SERVICE -> {
-                if (ctx.nodeManager().serviceActionManager != null) {
-                    val config = ctx.platform().json2object(def.config, ServiceActionConfig::class.java)
-                    ctx.nodeManager().serviceActionManager!!.invokeService(
-                        ServiceTask(config.workerType, config.taskType, payload),
-                        resultEventPath
-                    )
-                } else {
+                if (ctx.nodeManager().asyncActionManager == null)
                     throw RuntimeException("ServiceActionManager is not configured")
-                }
+
+                val config = ctx.platform().json2object(def.config, ServiceActionConfig::class.java)
+                ctx.nodeManager().serviceActionManager!!.invokeService(
+                    ServiceTask(config.workerType, config.taskType, payload),
+                    resultEventPath
+                )
             }
 
             InvocationType.SERVICE_STUB -> {
@@ -110,9 +124,13 @@ open class InvocationActionDef (
     val guardResult = "$id.${InvocationAction.GUARD_RESULT}"
 }
 
+data class AsyncActionConfig(
+    val `class`: String,
+    val settings: ObjectNode  //async task class specific settings
+)
+
 data class SubprocessActionConfig(
-    val processName: String,
-    val args: ObjectNode?
+    val processName: String
 )
 
 data class ServiceActionConfig(

@@ -29,9 +29,9 @@ subprojects {
 
 
 
-project("process") {
+project("process") {}
 
-}
+project("dicom-tools") {}
 
 project("platform-controller") {
     dependencies {

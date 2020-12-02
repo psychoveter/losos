@@ -23,6 +23,7 @@ class NodeManager (
     val platform: LososPlatform,
     val processLibrary: ProcessLibrary,
     val serviceActionManager: ServiceActionManager? = null,
+    val asyncActionManager: AsyncActionManager? = null,
     val name: String = UUID.randomUUID().toString(),
     val host: String = "localhost",
     val idGen: IDGenerator = IDGenUUID
@@ -31,7 +32,6 @@ class NodeManager (
     private val logger = LoggerFactory.getLogger(NodeManager::class.java)
 
     val processManager = ProcessManager(this)
-    val asyncActionManager = AsyncActionManager(this)
     val subprocessPlanner = SubprocessPlanner(platform)
 
     private var isRunning = true
