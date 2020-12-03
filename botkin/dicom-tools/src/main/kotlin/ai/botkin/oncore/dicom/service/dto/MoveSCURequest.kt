@@ -7,6 +7,7 @@ class MoveSCURequest(
     val studyInstanceUID: String? = null,
     val seriesInstanceUID: String? = null,
     val sopInstanceUID: String? = null,
-    val level: RecordType = RecordType.STUDY
+    val level: RecordType = RecordType.STUDY,
+    val awaitTimeout: Long = 5 * 60 * 1000 //5 min
 ): ServiceRequest {
 }

@@ -30,6 +30,7 @@ class FileStorage(
         val cuid = rq.getString(Tag.AffectedSOPClassUID)
         val iuid = rq.getString(Tag.AffectedSOPInstanceUID)
         val tsuid = pc.transferSyntax
+
         val fileName = "$iuid.dcm"
         val sourceLocalFile = File(storagePath, fileName)
 

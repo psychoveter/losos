@@ -35,14 +35,13 @@ project("dicom-tools") {}
 
 project("platform-controller") {
     dependencies {
-        compile project(":common")
         compile project(":process")
     }
 }
 
 project("satellite") {
     dependencies {
-        compile project(":common")
+        compile project(":dicom-tools")
         compile project(":process")
     }
 }

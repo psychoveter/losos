@@ -1,9 +1,12 @@
 package ai.botkin.satellite.gateway
 
+import ai.botkin.oncore.dicom.PacsClient
+import ai.botkin.oncore.dicom.service.dto.MoveSCURequest
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.losos.common.AbstractAsyncTask
 import io.losos.platform.LososPlatform
 import io.opentracing.Tracer
+import org.dcm4che3.media.RecordType
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import java.lang.RuntimeException
@@ -24,6 +27,9 @@ class GatewayMoveAsyncTask(platform: LososPlatform): AbstractAsyncTask<ObjectNod
     @Autowired
     private lateinit var tracer: Tracer
 
+    @Autowired
+    private lateinit var pacsClient: PacsClient
+
     override fun doWork(args: ObjectNode?, settings: GatewayTaskSettings?): Any? {
         if (args == null)
             throw RuntimeException("Arguments shouldn't be null")
@@ -33,10 +39,26 @@ class GatewayMoveAsyncTask(platform: LososPlatform): AbstractAsyncTask<ObjectNod
 
         logger.info("Tracer initialized ${this::tracer.isInitialized}")
 
-        //do download magic
-        Thread.sleep(1000)
+        val studyUid = args.get("studyUid").textValue()
 
         return args
+    }
+
+    private fun moveStudy(
+        studyUid: String,
+        destination: String
+    ) {
+        val moveRequest = MoveSCURequest(
+            destination = destination,
+            studyInstanceUID = studyUid,
+            level = RecordType.STUDY
+        )
+
+        //call blocks until processing is done
+        pacsClient.move(moveRequest)
+
+        //at this point we have to get list of files
+        //how to get list of files?
     }
 
 }

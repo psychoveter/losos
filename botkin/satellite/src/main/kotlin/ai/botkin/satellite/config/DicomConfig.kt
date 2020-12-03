@@ -1,16 +1,28 @@
-import ai.botkin.oncore.test.PacsClientTest
+package ai.botkin.satellite.config
+
+import ai.botkin.oncore.dicom.PacsClient
 import ai.botkin.oncore.dicom.dsl.PacsClientDsl
-import ai.botkin.oncore.dicom.service.dto.StoreSCURequest
 import org.dcm4che3.data.UID
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
-import java.io.File
-import java.io.FileInputStream
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 
-@TestInstance(TestInstance.Lifecycle.PER_METHOD)
-class Dcm4CheePacsClientSTORESCU: PacsClientTest {
 
-    fun createClient() = PacsClientDsl {
+@Configuration
+open class DicomConfig(
+    @Value("\${satellite.dicom.store-scp.folder-store:/tmp/data/dicom-store}")
+    val dicomStoreFolder: String,
+
+    @Value("\${satellite.dicom.store-scp.folder-report:/tmp/data/dicom-report}")
+    val dicomReportFolder: String,
+
+    @Value("\${satellite.dicom.store-scp.port:/tmp/data/dicom-report}")
+    val localStorePort: Int
+) {
+
+
+    @Bean
+    fun pacsClient(): PacsClient = PacsClientDsl {
 
         PresentationContext {
             abstractSyntax = UID.SecondaryCaptureImageStorage
@@ -31,7 +43,7 @@ class Dcm4CheePacsClientSTORESCU: PacsClientTest {
                 UID.ImplicitVRLittleEndian
             )
             isSCU = true
-            isSCP = false
+            isSCP = true
         }
 
         PresentationContext {
@@ -77,36 +89,21 @@ class Dcm4CheePacsClientSTORESCU: PacsClientTest {
                 port = 5999
             }
         }
+
         FindSCU {}
 
         StoreSCU {}
-    }
 
-    fun storeCTSeries() = withClient(createClient()) { client ->
-
-        val url = this.javaClass.getResource("TestSeria20")
-        val dir = File(url.toURI())
-        for(file in dir.listFiles()) {
-            val bytes = FileInputStream(file).readAllBytes()
-            println("Storing file")
-            client.storeSync(StoreSCURequest(
-                data = bytes
-            ))
+        StoreSCP {
+            storeFolder = dicomStoreFolder
+            ApplicationEntity {
+                aeTitle = "S1"
+                Connection {
+                    host = "0.0.0.0"
+                    port = localStorePort
+                }
+            }
         }
-
     }
 
-    fun storeDicomSRFiles() {
-
-    }
-
-    fun storeDicomSCFiles() {
-
-    }
-
-}
-
-fun main(args: Array<String>) {
-    val test = Dcm4CheePacsClientSTORESCU()
-    test.storeCTSeries()
 }

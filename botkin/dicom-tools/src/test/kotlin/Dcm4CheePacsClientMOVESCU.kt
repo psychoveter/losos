@@ -1,5 +1,6 @@
 import ai.botkin.oncore.test.PacsClientTest
 import ai.botkin.oncore.dicom.dsl.PacsClientDsl
+import ai.botkin.oncore.dicom.service.dto.MoveSCURequest
 import org.dcm4che3.data.UID
 import org.junit.jupiter.api.TestInstance
 
@@ -32,6 +33,14 @@ class Dcm4CheePacsClientMOVESCU: PacsClientTest {
             }
         }
 
+        PACS {
+            aeTitle = "TSTMOCK"
+            Connection {
+                host = "10.10.101.52"
+                port = 11114
+            }
+        }
+
         MoveSCU {
 
         }
@@ -50,13 +59,20 @@ class Dcm4CheePacsClientMOVESCU: PacsClientTest {
         }
     }
 
-    fun createMoveCoordinatorClient() {
+    fun createMoveCoordinatorClient() {}
 
-    }
+    fun createStoreSCPMinion() {}
 
-    fun createStoreSCPMinion() {
+}
 
-    }
+fun main(args: Array<String>) {
+    val test = Dcm4CheePacsClientMOVESCU()
+    val client = test.createMoveSingleNodeClient()
+
+    val request = MoveSCURequest (
+        destination = "OLEGLC",
+        studyInstanceUID = ""
+    )
 
 
 
