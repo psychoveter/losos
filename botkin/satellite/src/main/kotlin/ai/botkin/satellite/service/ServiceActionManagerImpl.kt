@@ -24,7 +24,10 @@ import org.springframework.http.HttpEntity
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestTemplate
 import java.lang.Exception
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.stream.Stream
 
 /**
  * Service manager implements Task Execution Protocol
@@ -54,17 +57,17 @@ class ServiceActionManagerImpl(
 
 
     private val serviceRegistry: Map<String, AbstractTEPServiceProvider> = mapOf(
-        SERVICE_REPORTER to ReporterServiceProvider("http://192.168.2.2:8000", restTemplate, tracer),
-        SERVICE_ML to MLServiceProvider("http://192.168.2.2:8001", restTemplate, tracer),
-        SERVICE_GATEWAY to GatewayServiceProvider("http://192.168.2.2:8002", restTemplate, tracer)
+        SERVICE_REPORTER to ReporterServiceProvider("http://192.168.2.2:8000",tracer),
+        SERVICE_ML to MLServiceProvider("http://192.168.2.2:8001",  tracer),
+        SERVICE_GATEWAY to GatewayServiceProvider("http://192.168.2.2:8002", tracer)
     )
 
     private val serviceErrorResolvers: Map<String, AbstractServiceErrorResolver> = mapOf(
-        SERVICE_ML to MLServiceErrorResolver(serviceRegistry[SERVICE_ML]!!.url, restTemplate,
+        SERVICE_ML to MLServiceErrorResolver(serviceRegistry[SERVICE_ML]!!.url, RestTemplate(),
             Fabric8KubernetesClient()),
-        SERVICE_REPORTER to ReportServiceErrorResolver(serviceRegistry[SERVICE_REPORTER]!!.url, restTemplate,
+        SERVICE_REPORTER to ReportServiceErrorResolver(serviceRegistry[SERVICE_REPORTER]!!.url, RestTemplate(),
             Fabric8KubernetesClient()),
-        SERVICE_GATEWAY to GatewayServiceErrorResolver(serviceRegistry[SERVICE_GATEWAY]!!.url, restTemplate,
+        SERVICE_GATEWAY to GatewayServiceErrorResolver(serviceRegistry[SERVICE_GATEWAY]!!.url, RestTemplate(),
             Fabric8KubernetesClient())
     )
 
@@ -74,36 +77,41 @@ class ServiceActionManagerImpl(
         SERVICE_GATEWAY to ConcurrentLinkedQueue()
     )
 
-    private val taskRequests: MutableMap<String, Int> = mutableMapOf (
-        SERVICE_ML to 0,
-        SERVICE_REPORTER to 0,
-        SERVICE_GATEWAY to 0
-    )
+    private val taskRequests = ConcurrentHashMap<String, Int>(
+        mutableMapOf(
+            SERVICE_ML to 0,
+            SERVICE_REPORTER to 0,
+            SERVICE_GATEWAY to 0
+    ))
 
     fun MutableMap<String, Int>.isEmpty(key:String):Boolean{
         return this[key] == 0
     }
 
     private val tepMessageQueue =  mapOf(
-        SERVICE_ML to ConcurrentLinkedQueue<TEPMessage>(),
-        SERVICE_REPORTER to ConcurrentLinkedQueue<TEPMessage>(),
-        SERVICE_GATEWAY to ConcurrentLinkedQueue<TEPMessage>())
+        SERVICE_ML to mutableMapOf<String, Queue<TEPMessage>>(),
+        SERVICE_REPORTER to mutableMapOf<String, Queue<TEPMessage>>(),
+        SERVICE_GATEWAY to mutableMapOf<String, Queue<TEPMessage>>())
 
     private val scheduler = TaskScheduler()
 
-
+    private fun cleanTaskContext(workerType:String, taskId:String){
+        scheduler.removeTask(taskId)
+        tepMessageQueue[workerType]!!.remove(taskId)
+    }
 
     private suspend fun runServiceTask(workerType: String){
         val serviceTask = taskQueue[workerType]!!.poll()
-        val taskId = serviceTask.args.get("id").asText()
+        val taskId = serviceTask.args!!.get("id").asText()
         scheduler.scheduleTask(workerType, taskId)
         var status = TaskFinishState.NOTHING
+        tepMessageQueue[workerType]!![taskId] = LinkedList<TEPMessage>()
         try {
             while(status != TaskFinishState.DONE && scheduler.allowedToRetry(taskId)){
                 //TODO change to custom Coroutine scope
-                val job = GlobalScope.async{processTask(workerType, taskId, serviceTask)}
+                val job = GlobalScope.async{processTask(taskId, serviceTask)}
                 while (!job.isCompleted){
-                    logger.info("Checking $workerType service status")
+//                    logger.info("Checking $workerType service status")
                     val res = serviceErrorResolvers[workerType]!!.checkService()
                     if(!res){
                         status = TaskFinishState.HUNG
@@ -111,6 +119,7 @@ class ServiceActionManagerImpl(
                         logger.info("Restarting hung $workerType service")
 //                    serviceErrorResolvers[serviceTask.workerType]!!
 //                        .kubernetesClient.deletePod("default", "")
+                        cleanTaskContext(workerType, taskId)
                         return
                     }
                     delay(5000)
@@ -125,16 +134,16 @@ class ServiceActionManagerImpl(
             }
             when(status){
                 TaskFinishState.FAILED -> {
-                    logger.info("Failing task on $workerType")
+                    logger.info("Failing task $taskId on $workerType")
                     //report failure
-
+                    cleanTaskContext(workerType, taskId)
                     return
                 }
 
                 TaskFinishState.DONE -> {
                     //report completion
-                    logger.info("Finishing task on $workerType")
-                    scheduler.removeTask(taskId)
+                    logger.info("Finishing task $taskId on $workerType")
+                    cleanTaskContext(workerType, taskId)
                     return
                 }
                 //obsolete
@@ -145,13 +154,13 @@ class ServiceActionManagerImpl(
             logger.error(e.toString())
         }
 }
-    private suspend fun processTask(workerType:String, taskId: String, serviceTask:ServiceTask):TaskFinishState {
+    private suspend fun processTask(taskId:String, serviceTask:ServiceTask):TaskFinishState {
             try {
-                while (taskRequests.isEmpty(workerType)){
+                while (taskRequests.isEmpty(serviceTask.workerType)){
 //                    logger.info("")
                     delay(1000)
                 }
-                if(!taskRequests.isEmpty(key = workerType)){
+                if(!taskRequests.isEmpty(key = serviceTask.workerType)){
                     taskRequests[serviceTask.workerType] = taskRequests[serviceTask.workerType]!! - 1
                     when(serviceTask.workerType){
                         SERVICE_ML -> {
@@ -159,7 +168,7 @@ class ServiceActionManagerImpl(
 
                             val requestML = assembleRequestML(serviceTask.args)
                             val mlProvider = serviceRegistry[SERVICE_ML]
-                            mlProvider!!.postEntity(requestML, tracer.buildSpan(workerType).start(),
+                            mlProvider!!.postEntity(requestML, tracer.buildSpan(serviceTask.workerType).start(),
                                 "${mlProvider.url}/task")
                         }
 
@@ -168,16 +177,14 @@ class ServiceActionManagerImpl(
                             val requestReport = assembleRequestReport(serviceTask.args)
                             val reportProvider = serviceRegistry[SERVICE_REPORTER]
                             reportProvider!!.postEntity(requestReport,
-                                tracer.buildSpan(workerType).start(),
+                                tracer.buildSpan(serviceTask.workerType).start(),
                                 "${reportProvider.url}/task")
                         }
                     }
                 }
                 while (true){
-                    if(tepMessageQueue[serviceTask.workerType]!!.isNotEmpty()) {
-                        if (tepMessageQueue[serviceTask.workerType]!!.peek().taskId == taskId) {
-
-                            when (val message = tepMessageQueue[serviceTask.workerType]!!.poll()) {
+                    if(tepMessageQueue[serviceTask.workerType]!![taskId]!!.isNotEmpty()) {
+                            when (val message = tepMessageQueue[serviceTask.workerType]!![taskId]!!.poll()) {
                                 is Ok -> {
                                     logger.info("Got Ok message from ${message.workerType} for task ${message.taskId}")
                                 }
@@ -197,12 +204,12 @@ class ServiceActionManagerImpl(
                                     return TaskFinishState.DONE
                                 }
                             }
-                        }
+
                     }
                     else{
 //                            logger.info("Waiting for task request from $workerType service with task id $taskId")
 //                            logger.info("Checking $workerType service state")
-                        logger.info("Waiting for messages from $workerType service for task $taskId")
+//                        logger.info("Waiting for messages from $workerType service for task $taskId")
                         delay(5000)
                         yield()
                     }
@@ -228,8 +235,8 @@ class ServiceActionManagerImpl(
      * This method is called by rest controller to pass message from service to ServiceActionManager
      * */
     fun addTEPMessage(message: TEPMessage){
-        //maybe service watchdog should use this method when killing service process
-        tepMessageQueue[message.workerType]!!.add(message)
+
+        tepMessageQueue[message.workerType]!![message.taskId]!!.add(message)
     }
 
 
@@ -244,14 +251,14 @@ class ServiceActionManagerImpl(
         //stop task post loop
     }
 
-    fun assembleRequestML(args:ObjectNode):Request<MLTask> {
-        val mlTask = mapper.readValue(args.traverse(), MLTask::class.java)
+    fun assembleRequestML(args:ObjectNode?):Request<MLTask> {
+        val mlTask = mapper.readValue(args!!.traverse(), MLTask::class.java)
         return Request("ml", listOf(mlTask))
     }
 
 
-    fun assembleRequestReport(args:ObjectNode):Request<ReportTask>{
-        val reportTask = mapper.readValue(args.traverse(), ReportTask::class.java)
+    fun assembleRequestReport(args:ObjectNode?):Request<ReportTask>{
+        val reportTask = mapper.readValue(args!!.traverse(), ReportTask::class.java)
         return Request("report", listOf(reportTask))
     }
 
@@ -279,14 +286,13 @@ interface TEPServiceProvider {
 
 abstract class AbstractTEPServiceProvider(
     val url: String,
-    val rest: RestTemplate,
     val tracer: Tracer
 ): TEPServiceProvider {
 
     private val logger = LoggerFactory.getLogger(AbstractTEPServiceProvider::class.java)
 
     fun <T> postEntity(request: Request<T>, span: Span, url:String){
-
+        val rest = RestTemplate()
         rest.interceptors.add(CustomTracingRestTemplateInterceptor(tracer, span=span))
 
         val message = rest.postForObject(
@@ -300,9 +306,8 @@ abstract class AbstractTEPServiceProvider(
 
 class MLServiceProvider(
     url: String,
-    rest: RestTemplate,
     tracer: Tracer
-): AbstractTEPServiceProvider(url, rest, tracer) {
+): AbstractTEPServiceProvider(url, tracer) {
     override fun postTask(workerType: String) {
         TODO("Not yet implemented")
     }
@@ -310,9 +315,8 @@ class MLServiceProvider(
 
 class ReporterServiceProvider(
     url: String,
-    rest: RestTemplate,
     tracer: Tracer
-): AbstractTEPServiceProvider(url, rest, tracer) {
+): AbstractTEPServiceProvider(url,tracer) {
     override fun postTask(workerType: String) {
         TODO("Not yet implemented")
     }
@@ -321,9 +325,8 @@ class ReporterServiceProvider(
 //may be gateway task is better implement as async task inside satellite itself?..
 class GatewayServiceProvider(
     url: String,
-    rest: RestTemplate,
     tracer: Tracer
-): AbstractTEPServiceProvider(url, rest, tracer) {
+): AbstractTEPServiceProvider(url, tracer) {
     override fun postTask(workerType: String) {
 //        postEntity()
     }

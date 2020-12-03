@@ -1,6 +1,7 @@
 package ai.botkin.satellite.scheduler
 
 import java.time.LocalDateTime
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
@@ -24,7 +25,7 @@ class TaskState(val workerType: String, val startTime:Long, var currentDuration:
 
 class TaskScheduler(val retryPolicy:RetryPolicy = RetryPolicy.SIMPLE_RETRY, val retryConfig:RetryConfig = RetryConfig()){
 
-    private val tasks = mutableMapOf<String, TaskState>()
+    private val tasks = ConcurrentHashMap <String, TaskState>()
 
     fun scheduleTask(workerType:String, taskId:String){
         val taskState = TaskState(workerType, System.currentTimeMillis())
